@@ -14,12 +14,13 @@
     body {
       font-family: 'Segoe UI', sans-serif;
       display: flex;
-      height: 100vh;
+      height: 100dvh;
       background: #f0f2f5;
       color: #333;
+      overflow: hidden;
     }
 
-    /* ───── PANNELLO SINISTRO ───── */
+    /* ───── PANNELLO SINISTRO (desktop) ───── */
     #sidebar {
       width: 320px;
       min-width: 280px;
@@ -66,10 +67,10 @@
 
     #form-box input {
       width: 100%;
-      padding: 8px 10px;
+      padding: 10px 12px;
       border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: .9rem;
+      border-radius: 8px;
+      font-size: 1rem;
       margin-bottom: 10px;
       transition: border-color .2s;
     }
@@ -88,23 +89,25 @@
 
     #btn-add {
       width: 100%;
-      padding: 9px;
+      padding: 12px;
       background: #1565c0;
       color: #fff;
       border: none;
-      border-radius: 6px;
-      font-size: .9rem;
+      border-radius: 8px;
+      font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
       transition: background .2s;
+      touch-action: manipulation;
     }
 
     #btn-add:hover { background: #0d47a1; }
+    #btn-add:active { background: #0a3880; }
     #btn-add:disabled { background: #90a4ae; cursor: not-allowed; }
 
     #status-msg {
       margin-top: 8px;
-      font-size: .8rem;
+      font-size: .85rem;
       min-height: 1.2em;
       text-align: center;
     }
@@ -139,20 +142,23 @@
       flex: 1;
       overflow-y: auto;
       padding: 4px 8px 12px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .marker-item {
       display: flex;
       align-items: flex-start;
-      padding: 8px 8px;
-      border-radius: 6px;
+      padding: 10px 8px;
+      border-radius: 8px;
       margin-bottom: 4px;
       cursor: pointer;
       transition: background .15s;
       border: 1px solid transparent;
+      touch-action: manipulation;
     }
 
-    .marker-item:hover { background: #e8f0fe; border-color: #bbdefb; }
+    .marker-item:hover  { background: #e8f0fe; border-color: #bbdefb; }
+    .marker-item:active { background: #dce9fd; }
 
     .marker-icon {
       width: 28px;
@@ -165,19 +171,24 @@
       margin-top: 2px;
     }
 
-    .marker-text { flex: 1; }
+    .marker-text { flex: 1; min-width: 0; }
 
     .marker-name {
-      font-size: .88rem;
+      font-size: .92rem;
       font-weight: 600;
       color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .marker-addr {
       font-size: .75rem;
       color: #777;
-      margin-top: 1px;
-      word-break: break-word;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .marker-coords {
@@ -191,15 +202,23 @@
       border: none;
       color: #bbb;
       cursor: pointer;
-      font-size: 1rem;
-      padding: 0 0 0 6px;
+      font-size: 1.1rem;
+      padding: 4px 6px;
       line-height: 1;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 0;
       transition: color .15s;
+      touch-action: manipulation;
+      min-width: 36px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
     }
 
-    .btn-del:hover { color: #c62828; }
+    .btn-del:hover  { color: #c62828; background: #fdecea; }
+    .btn-del:active { color: #b71c1c; }
 
     #empty-msg {
       text-align: center;
@@ -209,12 +228,20 @@
     }
 
     /* ───── MAPPA ───── */
-    #map { flex: 1; }
+    #map-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
 
     /* spinner */
     .spin {
       display: inline-block;
-      width: 14px; height: 14px;
+      width: 16px; height: 16px;
       border: 2px solid #fff;
       border-top-color: transparent;
       border-radius: 50%;
@@ -233,54 +260,198 @@
       z-index: 1000;
       background: #fff;
       border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 7px 12px;
-      font-size: .82rem;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: .85rem;
       font-weight: 600;
       color: #1565c0;
       cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,.18);
       transition: background .15s, box-shadow .15s;
+      touch-action: manipulation;
     }
-    #btn-fitall:hover { background: #e8f0fe; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
+    #btn-fitall:hover  { background: #e8f0fe; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
     #btn-fitall:active { background: #c5cae9; }
+
+    /* ───── MOBILE BOTTOM DRAWER ───── */
+    @media (max-width: 640px) {
+      body {
+        flex-direction: column;
+      }
+
+      #sidebar {
+        width: 100%;
+        min-width: unset;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,.18);
+        max-height: 75dvh;
+        transition: transform .35s cubic-bezier(.4,0,.2,1);
+        transform: translateY(calc(100% - 64px));
+      }
+
+      #sidebar.open {
+        transform: translateY(0);
+      }
+
+      /* maniglia visibile del drawer */
+      #drawer-handle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        height: 64px;
+        cursor: pointer;
+        background: #1565c0;
+        border-radius: 20px 20px 0 0;
+        touch-action: manipulation;
+        flex-shrink: 0;
+      }
+
+      #drawer-handle-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+      }
+
+      #drawer-handle-pill {
+        display: none;
+      }
+
+      #drawer-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      #drawer-badge {
+        background: rgba(255,255,255,.25);
+        color: #fff;
+        border-radius: 10px;
+        padding: 2px 9px;
+        font-size: .78rem;
+        font-weight: 700;
+      }
+
+      #drawer-arrow {
+        color: rgba(255,255,255,.8);
+        font-size: 1.3rem;
+        transition: transform .3s;
+      }
+
+      #sidebar.open #drawer-arrow {
+        transform: rotate(180deg);
+      }
+
+      /* nasconde l'header originale su mobile (usiamo drawer-handle) */
+      #sidebar-header {
+        display: none;
+      }
+
+      /* il contenuto del drawer è scrollabile */
+      #sidebar-inner {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #map-wrap {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 0;
+      }
+
+      #btn-fitall {
+        top: auto;
+        bottom: 80px;
+        right: 14px;
+        padding: 11px 16px;
+        font-size: .9rem;
+      }
+
+      /* bottone aggiungi su mobile più grande */
+      #btn-add {
+        padding: 14px;
+        font-size: 1.05rem;
+      }
+
+      #form-box input {
+        padding: 12px 14px;
+        font-size: 1rem;
+      }
+
+      .marker-item {
+        padding: 12px 8px;
+      }
+    }
+
+    /* su schermi grandi nascondi drawer-handle */
+    @media (min-width: 641px) {
+      #drawer-handle { display: none; }
+      #sidebar-inner {
+        display: contents;
+      }
+    }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════ SIDEBAR ═══════════════ -->
-<div id="sidebar">
-  <div id="sidebar-header">
-    <h1>📍 Mappa Italia</h1>
-    <p>Aggiungi e gestisci i tuoi punti</p>
-    <p id="sync-time" style="font-size:.7rem;opacity:.65;margin-top:4px;"></p>
-  </div>
-
-  <div id="form-box">
-    <label for="inp-nome">Nome</label>
-    <input id="inp-nome" type="text" placeholder="es. Stabilimento Nord" />
-
-    <label for="inp-pos">Posizione</label>
-    <input id="inp-pos" type="text" placeholder="es. Via Roma 1, Milano" />
-    <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
-
-    <button id="btn-add" onclick="aggiungiMarker()">➕ Aggiungi</button>
-    <div id="status-msg"></div>
-  </div>
-
-  <div id="list-header">
-    Punti salvati
-    <span id="marker-count">0</span>
-  </div>
-
-  <div id="marker-list">
-    <div id="empty-msg">Nessun punto ancora</div>
-  </div>
+<!-- ═══════════════ MAPPA ═══════════════ -->
+<div id="map-wrap">
+  <div id="map"></div>
+  <button id="btn-fitall" onclick="adattaVista()" title="Mostra tutti i punti">⊞ Tutti i punti</button>
 </div>
 
-<!-- ═══════════════ MAPPA ═══════════════ -->
-<div id="map">
-  <button id="btn-fitall" onclick="adattaVista()" title="Mostra tutti i punti">⊞ Tutti i punti</button>
+<!-- ═══════════════ SIDEBAR / DRAWER ═══════════════ -->
+<div id="sidebar">
+  <!-- handle visibile solo su mobile -->
+  <div id="drawer-handle" onclick="toggleDrawer()" role="button" aria-label="Apri pannello">
+    <div id="drawer-handle-left">
+      <span>📍</span>
+      <span id="drawer-title">Mappa Impianti</span>
+      <span id="drawer-badge">0</span>
+    </div>
+    <span id="drawer-arrow">▲</span>
+  </div>
+
+  <div id="sidebar-inner">
+    <div id="sidebar-header">
+      <h1>📍 Mappa Impianti</h1>
+      <p>Aggiungi e gestisci i tuoi punti</p>
+      <p id="sync-time" style="font-size:.7rem;opacity:.65;margin-top:4px;"></p>
+    </div>
+
+    <div id="form-box">
+      <label for="inp-nome">Nome</label>
+      <input id="inp-nome" type="text" placeholder="es. Stabilimento Nord" autocomplete="off" />
+
+      <label for="inp-pos">Posizione</label>
+      <input id="inp-pos" type="text" placeholder="es. Via Roma 1, Milano" autocomplete="off" />
+      <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
+
+      <button id="btn-add" onclick="aggiungiMarker()">➕ Aggiungi</button>
+      <div id="status-msg"></div>
+    </div>
+
+    <div id="list-header">
+      Punti salvati
+      <span id="marker-count">0</span>
+    </div>
+
+    <div id="marker-list">
+      <div id="empty-msg">Nessun punto ancora</div>
+    </div>
+  </div>
 </div>
 
 <!-- Leaflet JS -->
@@ -489,6 +660,7 @@ function centrareSu(id) {
   const { lat, lng } = m.data;
   map.setView([parseFloat(lat), parseFloat(lng)], 14);
   m.leafletMarker.openPopup();
+  if (window.innerWidth <= 640) chiudiDrawer();
 }
 
 // ─── Render lista sidebar ─────────────────────────────────────────────────────
@@ -526,7 +698,10 @@ function renderLista() {
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 function aggiornaContatore() {
-  document.getElementById('marker-count').textContent = Object.keys(markers).length;
+  const n = Object.keys(markers).length;
+  document.getElementById('marker-count').textContent = n;
+  const badge = document.getElementById('drawer-badge');
+  if (badge) badge.textContent = n;
 }
 
 function setMsg(txt, tipo) {
@@ -552,6 +727,21 @@ document.getElementById('inp-pos').addEventListener('keydown', e => {
 });
 document.getElementById('inp-nome').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('inp-pos').focus();
+});
+
+// ─── Mobile drawer ───────────────────────────────────────────────────────────
+function toggleDrawer() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('open');
+}
+
+function chiudiDrawer() {
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// chiudi drawer quando si tocca la mappa
+document.getElementById('map').addEventListener('click', () => {
+  if (window.innerWidth <= 640) chiudiDrawer();
 });
 
 // ─── Avvio ────────────────────────────────────────────────────────────────────
