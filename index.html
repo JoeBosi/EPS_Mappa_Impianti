@@ -477,52 +477,109 @@ const bluIcon = L.icon({
 
 // ─── Stato ───────────────────────────────────────────────────────────────────
 let markers = {};   // id → { data, leafletMarker }
-const LS_KEY = 'eps_mappa_markers';
 
-// ─── Persistenza localStorage ─────────────────────────────────────────────────
+// localStorage: delta rispetto al CSV
+// { aggiunte: [{id,nome,indirizzo,lat,lng}], eliminati: Set<id> }
+const LS_KEY = 'eps_mappa_delta';
+
 function lsLeggi() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
-  catch { return []; }
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+    return { aggiunte: d.aggiunte || [], eliminati: new Set(d.eliminati || []) };
+  } catch { return { aggiunte: [], eliminati: new Set() }; }
 }
 
-function lsSalva() {
-  const lista = Object.values(markers).map(m => m.data);
-  localStorage.setItem(LS_KEY, JSON.stringify(lista));
+function lsSalva(delta) {
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    aggiunte: delta.aggiunte,
+    eliminati: [...delta.eliminati]
+  }));
+}
+
+// ─── Parser CSV robusto (gestisce campi quotati con virgole interne) ──────────
+function parseCSV(testo) {
+  const righe = [];
+  const linee = testo.trim().split('\n');
+  const header = splitCSVRiga(linee[0]);
+  for (let i = 1; i < linee.length; i++) {
+    const valori = splitCSVRiga(linee[i]);
+    if (valori.length < header.length) continue;
+    const obj = {};
+    header.forEach((h, idx) => { obj[h.trim()] = valori[idx]; });
+    righe.push(obj);
+  }
+  return righe;
+}
+
+function splitCSVRiga(riga) {
+  const campi = [];
+  let cur = '', dentro = false;
+  for (let i = 0; i < riga.length; i++) {
+    const c = riga[i];
+    if (c === '"') {
+      if (dentro && riga[i+1] === '"') { cur += '"'; i++; }
+      else { dentro = !dentro; }
+    } else if (c === ',' && !dentro) {
+      campi.push(cur.trim());
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  campi.push(cur.trim());
+  return campi;
 }
 
 function idCasuale() {
-  return Math.random().toString(36).slice(2, 10);
+  return 'u_' + Math.random().toString(36).slice(2, 10);
 }
 
-// ─── Caricamento iniziale da localStorage ─────────────────────────────────────
-function caricaMarkers() {
-  const lista = lsLeggi();
-  for (const m of lista) {
-    aggiungiAllaUI(m);
-  }
-  renderLista();
-  aggiornaContatore();
-}
-
-// ─── Aggiunge un marker alla mappa e alla lista ───────────────────────────────
+// ─── Aggiunge un marker alla mappa (senza toccare lo stato delta) ─────────────
 function aggiungiAllaUI(m) {
   const lat = parseFloat(m.lat);
   const lng = parseFloat(m.lng);
+  if (isNaN(lat) || isNaN(lng)) return;
   const lm = L.marker([lat, lng], { icon: bluIcon })
     .addTo(map)
     .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
   markers[m.id] = { data: m, leafletMarker: lm };
 }
 
-// ─── Aggiunge un nuovo marker (geocoding + salvataggio locale) ────────────────
+// ─── Caricamento: CSV + delta localStorage ────────────────────────────────────
+async function caricaMarkers() {
+  const delta = lsLeggi();
+  let csvLista = [];
+
+  try {
+    const res = await fetch('markers.csv');
+    if (res.ok) {
+      const testo = await res.text();
+      csvLista = parseCSV(testo);
+    }
+  } catch(e) { /* file non disponibile, va bene */ }
+
+  // unisci: CSV prima, poi aggiunte utente, escludi eliminati
+  const tutti = [...csvLista, ...delta.aggiunte];
+  for (const m of tutti) {
+    if (!delta.eliminati.has(m.id)) {
+      aggiungiAllaUI(m);
+    }
+  }
+
+  renderLista();
+  aggiornaContatore();
+
+  if (Object.keys(markers).length > 1) {
+    adattaVista();
+  }
+}
+
+// ─── Aggiunge un nuovo marker (geocoding + salva nel delta) ──────────────────
 async function aggiungiMarker() {
   const nome = document.getElementById('inp-nome').value.trim();
   const pos  = document.getElementById('inp-pos').value.trim();
 
-  if (!nome || !pos) {
-    setMsg('Inserisci nome e posizione', 'err');
-    return;
-  }
+  if (!nome || !pos) { setMsg('Inserisci nome e posizione', 'err'); return; }
 
   const btn = document.getElementById('btn-add');
   btn.disabled = true;
@@ -542,23 +599,26 @@ async function aggiungiMarker() {
       const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
       const data = await res.json();
       if (!data.length) {
-        setMsg('Posizione non trovata — prova con indirizzo più preciso o lat,lng', 'err');
-        ripristinaBttn();
-        return;
+        setMsg('Posizione non trovata — prova lat,lng o indirizzo più preciso', 'err');
+        ripristinaBttn(); return;
       }
       lat = parseFloat(data[0].lat);
       lng = parseFloat(data[0].lon);
       indirizzo = data[0].display_name;
     } catch(e) {
       setMsg('Errore geocoding', 'err');
-      ripristinaBttn();
-      return;
+      ripristinaBttn(); return;
     }
   }
 
   const m = { id: idCasuale(), nome, indirizzo: indirizzo || '', lat: String(lat), lng: String(lng) };
+
+  // aggiorna delta
+  const delta = lsLeggi();
+  delta.aggiunte.push(m);
+  lsSalva(delta);
+
   aggiungiAllaUI(m);
-  lsSalva();
   renderLista();
   aggiornaContatore();
   map.setView([lat, lng], 13);
@@ -566,7 +626,6 @@ async function aggiungiMarker() {
   setMsg(`✓ "${nome}" aggiunto`, 'ok');
   document.getElementById('inp-nome').value = '';
   document.getElementById('inp-pos').value = '';
-
   ripristinaBttn();
 }
 
@@ -576,7 +635,14 @@ function eliminaMarker(id, e) {
   if (!confirm('Eliminare questo punto?')) return;
   map.removeLayer(markers[id].leafletMarker);
   delete markers[id];
-  lsSalva();
+
+  // salva nel delta
+  const delta = lsLeggi();
+  delta.eliminati.add(id);
+  // se era un'aggiunta utente, rimuovila anche da aggiunte
+  delta.aggiunte = delta.aggiunte.filter(m => m.id !== id);
+  lsSalva(delta);
+
   renderLista();
   aggiornaContatore();
 }
@@ -585,11 +651,8 @@ function eliminaMarker(id, e) {
 function adattaVista() {
   const coords = Object.values(markers).map(m => [parseFloat(m.data.lat), parseFloat(m.data.lng)]);
   if (!coords.length) return;
-  if (coords.length === 1) {
-    map.setView(coords[0], 13);
-  } else {
-    map.fitBounds(coords, { padding: [40, 40] });
-  }
+  if (coords.length === 1) { map.setView(coords[0], 13); }
+  else { map.fitBounds(coords, { padding: [40, 40] }); }
 }
 
 // ─── Centra mappa su marker ───────────────────────────────────────────────────
