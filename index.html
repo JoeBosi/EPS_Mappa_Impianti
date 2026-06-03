@@ -466,7 +466,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18
 }).addTo(map);
 
-// icona personalizzata
 const bluIcon = L.icon({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
@@ -478,88 +477,44 @@ const bluIcon = L.icon({
 
 // ─── Stato ───────────────────────────────────────────────────────────────────
 let markers = {};   // id → { data, leafletMarker }
+const LS_KEY = 'eps_mappa_markers';
 
-// ─── Sincronizzazione con il CSV (prima volta + polling) ─────────────────────
-async function sincronizzaMarkers(primaVolta = false) {
-  try {
-    const res = await fetch('/api/markers');
-    const lista = await res.json();
-
-    const serverIds  = new Set(lista.map(m => m.id));
-    const clientIds  = new Set(Object.keys(markers));
-    let changed = false;
-
-    // Rimuovi marker eliminati dal CSV
-    for (const id of clientIds) {
-      if (!serverIds.has(id)) {
-        map.removeLayer(markers[id].leafletMarker);
-        delete markers[id];
-        changed = true;
-      }
-    }
-
-    // Aggiungi marker nuovi o aggiorna quelli modificati
-    for (const m of lista) {
-      if (!markers[m.id]) {
-        // nuovo
-        const lat = parseFloat(m.lat);
-        const lng = parseFloat(m.lng);
-        const lm = L.marker([lat, lng], { icon: bluIcon })
-          .addTo(map)
-          .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
-        markers[m.id] = { data: m, leafletMarker: lm };
-        changed = true;
-      } else {
-        // controlla se il CSV è stato modificato a mano
-        const old = markers[m.id].data;
-        if (old.nome !== m.nome || old.indirizzo !== m.indirizzo ||
-            String(old.lat) !== String(m.lat) || String(old.lng) !== String(m.lng)) {
-          map.removeLayer(markers[m.id].leafletMarker);
-          delete markers[m.id];
-          const lat = parseFloat(m.lat);
-          const lng = parseFloat(m.lng);
-          const lm = L.marker([lat, lng], { icon: bluIcon })
-            .addTo(map)
-            .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
-          markers[m.id] = { data: m, leafletMarker: lm };
-          changed = true;
-        }
-      }
-    }
-
-    if (changed || primaVolta) {
-      renderLista();
-      aggiornaContatore();
-    }
-
-    // indicatore ultima sincronizzazione
-    const ora = new Date().toLocaleTimeString('it-IT');
-    document.getElementById('sync-time').textContent = `⟳ sync ${ora}`;
-
-  } catch(e) {
-    if (primaVolta) setMsg('Errore caricamento dati', 'err');
-  }
+// ─── Persistenza localStorage ─────────────────────────────────────────────────
+function lsLeggi() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+  catch { return []; }
 }
 
-// alias per primo caricamento
-async function caricaMarkers() {
-  await sincronizzaMarkers(true);
+function lsSalva() {
+  const lista = Object.values(markers).map(m => m.data);
+  localStorage.setItem(LS_KEY, JSON.stringify(lista));
+}
+
+function idCasuale() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// ─── Caricamento iniziale da localStorage ─────────────────────────────────────
+function caricaMarkers() {
+  const lista = lsLeggi();
+  for (const m of lista) {
+    aggiungiAllaUI(m);
+  }
+  renderLista();
+  aggiornaContatore();
 }
 
 // ─── Aggiunge un marker alla mappa e alla lista ───────────────────────────────
 function aggiungiAllaUI(m) {
   const lat = parseFloat(m.lat);
   const lng = parseFloat(m.lng);
-
   const lm = L.marker([lat, lng], { icon: bluIcon })
     .addTo(map)
     .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
-
   markers[m.id] = { data: m, leafletMarker: lm };
-  renderLista();
 }
 
-// ─── Aggiunge un nuovo marker (geocoding + salvataggio) ───────────────────────
+// ─── Aggiunge un nuovo marker (geocoding + salvataggio locale) ────────────────
 async function aggiungiMarker() {
   const nome = document.getElementById('inp-nome').value.trim();
   const pos  = document.getElementById('inp-pos').value.trim();
@@ -575,17 +530,15 @@ async function aggiungiMarker() {
 
   let lat, lng, indirizzo;
 
-  // controlla se è lat,lng oppure indirizzo
   const coordMatch = pos.match(/^(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)$/);
   if (coordMatch) {
     lat = parseFloat(coordMatch[1]);
     lng = parseFloat(coordMatch[2]);
     indirizzo = pos;
   } else {
-    // geocoding via Nominatim
     setMsg('Geocoding in corso...', 'inf');
     try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pos)}&format=json&limit=1&countrycodes=it`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pos)}&format=json&limit=1`;
       const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
       const data = await res.json();
       if (!data.length) {
@@ -603,43 +556,29 @@ async function aggiungiMarker() {
     }
   }
 
-  // salva sul server
-  try {
-    btn.innerHTML = '<span class="spin"></span>Salvo...';
-    const res = await fetch('/api/markers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome, indirizzo, lat, lng })
-    });
-    if (!res.ok) throw new Error();
-    const m = await res.json();
-    aggiungiAllaUI(m);
-    aggiornaContatore();
-    map.setView([lat, lng], 13);
-    markers[m.id].leafletMarker.openPopup();
-    setMsg(`✓ "${nome}" aggiunto`, 'ok');
-    document.getElementById('inp-nome').value = '';
-    document.getElementById('inp-pos').value = '';
-  } catch(e) {
-    setMsg('Errore salvataggio', 'err');
-  }
+  const m = { id: idCasuale(), nome, indirizzo: indirizzo || '', lat: String(lat), lng: String(lng) };
+  aggiungiAllaUI(m);
+  lsSalva();
+  renderLista();
+  aggiornaContatore();
+  map.setView([lat, lng], 13);
+  markers[m.id].leafletMarker.openPopup();
+  setMsg(`✓ "${nome}" aggiunto`, 'ok');
+  document.getElementById('inp-nome').value = '';
+  document.getElementById('inp-pos').value = '';
 
   ripristinaBttn();
 }
 
 // ─── Elimina marker ───────────────────────────────────────────────────────────
-async function eliminaMarker(id, e) {
+function eliminaMarker(id, e) {
   e.stopPropagation();
   if (!confirm('Eliminare questo punto?')) return;
-  try {
-    await fetch(`/api/markers/${id}`, { method: 'DELETE' });
-    map.removeLayer(markers[id].leafletMarker);
-    delete markers[id];
-    renderLista();
-    aggiornaContatore();
-  } catch(err) {
-    setMsg('Errore eliminazione', 'err');
-  }
+  map.removeLayer(markers[id].leafletMarker);
+  delete markers[id];
+  lsSalva();
+  renderLista();
+  aggiornaContatore();
 }
 
 // ─── Adatta vista a tutti i marker ───────────────────────────────────────────
@@ -657,8 +596,7 @@ function adattaVista() {
 function centrareSu(id) {
   const m = markers[id];
   if (!m) return;
-  const { lat, lng } = m.data;
-  map.setView([parseFloat(lat), parseFloat(lng)], 14);
+  map.setView([parseFloat(m.data.lat), parseFloat(m.data.lng)], 14);
   m.leafletMarker.openPopup();
   if (window.innerWidth <= 640) chiudiDrawer();
 }
@@ -666,18 +604,13 @@ function centrareSu(id) {
 // ─── Render lista sidebar ─────────────────────────────────────────────────────
 function renderLista() {
   const lista = document.getElementById('marker-list');
-  const empty = document.getElementById('empty-msg');
   const ids = Object.keys(markers);
 
   if (!ids.length) {
-    lista.innerHTML = '';
-    lista.appendChild(empty);
-    empty.style.display = '';
+    lista.innerHTML = '<div id="empty-msg">Nessun punto ancora</div>';
     return;
   }
 
-  empty.style.display = 'none';
-  // ordine alfabetico per nome
   ids.sort((a, b) => markers[a].data.nome.localeCompare(markers[b].data.nome, 'it'));
   lista.innerHTML = ids.map(id => {
     const m = markers[id].data;
@@ -731,23 +664,19 @@ document.getElementById('inp-nome').addEventListener('keydown', e => {
 
 // ─── Mobile drawer ───────────────────────────────────────────────────────────
 function toggleDrawer() {
-  const sb = document.getElementById('sidebar');
-  sb.classList.toggle('open');
+  document.getElementById('sidebar').classList.toggle('open');
 }
 
 function chiudiDrawer() {
   document.getElementById('sidebar').classList.remove('open');
 }
 
-// chiudi drawer quando si tocca la mappa
 document.getElementById('map').addEventListener('click', () => {
   if (window.innerWidth <= 640) chiudiDrawer();
 });
 
 // ─── Avvio ────────────────────────────────────────────────────────────────────
 caricaMarkers();
-// polling: controlla il CSV ogni 5 secondi
-setInterval(() => sincronizzaMarkers(false), 5000);
 </script>
 </body>
 </html>
