@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mappa Italia</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #f0f2f5;
+      color: #333;
+    }
+
+    /* ───── PANNELLO SINISTRO ───── */
+    #sidebar {
+      width: 320px;
+      min-width: 280px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 10px rgba(0,0,0,.12);
+      z-index: 1000;
+    }
+
+    #sidebar-header {
+      background: #1565c0;
+      color: #fff;
+      padding: 18px 16px 14px;
+    }
+
+    #sidebar-header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+
+    #sidebar-header p {
+      font-size: .78rem;
+      opacity: .8;
+      margin-top: 2px;
+    }
+
+    /* form */
+    #form-box {
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    #form-box label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    #form-box input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: .9rem;
+      margin-bottom: 10px;
+      transition: border-color .2s;
+    }
+
+    #form-box input:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+
+    #form-box .hint {
+      font-size: .72rem;
+      color: #888;
+      margin-top: -8px;
+      margin-bottom: 10px;
+    }
+
+    #btn-add {
+      width: 100%;
+      padding: 9px;
+      background: #1565c0;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    #btn-add:hover { background: #0d47a1; }
+    #btn-add:disabled { background: #90a4ae; cursor: not-allowed; }
+
+    #status-msg {
+      margin-top: 8px;
+      font-size: .8rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    .msg-ok  { color: #2e7d32; }
+    .msg-err { color: #c62828; }
+    .msg-inf { color: #1565c0; }
+
+    /* lista marker */
+    #list-header {
+      padding: 10px 16px 6px;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #marker-count {
+      background: #e3f2fd;
+      color: #1565c0;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+
+    #marker-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px 12px;
+    }
+
+    .marker-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 8px 8px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      transition: background .15s;
+      border: 1px solid transparent;
+    }
+
+    .marker-item:hover { background: #e8f0fe; border-color: #bbdefb; }
+
+    .marker-icon {
+      width: 28px;
+      height: 28px;
+      background: #1565c0;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      flex-shrink: 0;
+      margin-right: 10px;
+      margin-top: 2px;
+    }
+
+    .marker-text { flex: 1; }
+
+    .marker-name {
+      font-size: .88rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .marker-addr {
+      font-size: .75rem;
+      color: #777;
+      margin-top: 1px;
+      word-break: break-word;
+    }
+
+    .marker-coords {
+      font-size: .68rem;
+      color: #aaa;
+      margin-top: 1px;
+    }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: #bbb;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0 0 0 6px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: color .15s;
+    }
+
+    .btn-del:hover { color: #c62828; }
+
+    #empty-msg {
+      text-align: center;
+      color: #bbb;
+      font-size: .85rem;
+      padding: 24px 0;
+    }
+
+    /* ───── MAPPA ───── */
+    #map { flex: 1; }
+
+    /* spinner */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* bottone adatta vista */
+    #btn-fitall {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #1565c0;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,.18);
+      transition: background .15s, box-shadow .15s;
+    }
+    #btn-fitall:hover { background: #e8f0fe; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
+    #btn-fitall:active { background: #c5cae9; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>📍 Mappa Italia</h1>
+    <p>Aggiungi e gestisci i tuoi punti</p>
+    <p id="sync-time" style="font-size:.7rem;opacity:.65;margin-top:4px;"></p>
+  </div>
+
+  <div id="form-box">
+    <label for="inp-nome">Nome</label>
+    <input id="inp-nome" type="text" placeholder="es. Stabilimento Nord" />
+
+    <label for="inp-pos">Posizione</label>
+    <input id="inp-pos" type="text" placeholder="es. Via Roma 1, Milano" />
+    <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
+
+    <button id="btn-add" onclick="aggiungiMarker()">➕ Aggiungi</button>
+    <div id="status-msg"></div>
+  </div>
+
+  <div id="list-header">
+    Punti salvati
+    <span id="marker-count">0</span>
+  </div>
+
+  <div id="marker-list">
+    <div id="empty-msg">Nessun punto ancora</div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAPPA ═══════════════ -->
+<div id="map">
+  <button id="btn-fitall" onclick="adattaVista()" title="Mostra tutti i punti">⊞ Tutti i punti</button>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+// ─── Mappa ───────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([42.5, 12.5], 6);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 18
+}).addTo(map);
+
+// icona personalizzata
+const bluIcon = L.icon({
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// ─── Stato ───────────────────────────────────────────────────────────────────
+let markers = {};   // id → { data, leafletMarker }
+
+// ─── Sincronizzazione con il CSV (prima volta + polling) ─────────────────────
+async function sincronizzaMarkers(primaVolta = false) {
+  try {
+    const res = await fetch('/api/markers');
+    const lista = await res.json();
+
+    const serverIds  = new Set(lista.map(m => m.id));
+    const clientIds  = new Set(Object.keys(markers));
+    let changed = false;
+
+    // Rimuovi marker eliminati dal CSV
+    for (const id of clientIds) {
+      if (!serverIds.has(id)) {
+        map.removeLayer(markers[id].leafletMarker);
+        delete markers[id];
+        changed = true;
+      }
+    }
+
+    // Aggiungi marker nuovi o aggiorna quelli modificati
+    for (const m of lista) {
+      if (!markers[m.id]) {
+        // nuovo
+        const lat = parseFloat(m.lat);
+        const lng = parseFloat(m.lng);
+        const lm = L.marker([lat, lng], { icon: bluIcon })
+          .addTo(map)
+          .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
+        markers[m.id] = { data: m, leafletMarker: lm };
+        changed = true;
+      } else {
+        // controlla se il CSV è stato modificato a mano
+        const old = markers[m.id].data;
+        if (old.nome !== m.nome || old.indirizzo !== m.indirizzo ||
+            String(old.lat) !== String(m.lat) || String(old.lng) !== String(m.lng)) {
+          map.removeLayer(markers[m.id].leafletMarker);
+          delete markers[m.id];
+          const lat = parseFloat(m.lat);
+          const lng = parseFloat(m.lng);
+          const lm = L.marker([lat, lng], { icon: bluIcon })
+            .addTo(map)
+            .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
+          markers[m.id] = { data: m, leafletMarker: lm };
+          changed = true;
+        }
+      }
+    }
+
+    if (changed || primaVolta) {
+      renderLista();
+      aggiornaContatore();
+    }
+
+    // indicatore ultima sincronizzazione
+    const ora = new Date().toLocaleTimeString('it-IT');
+    document.getElementById('sync-time').textContent = `⟳ sync ${ora}`;
+
+  } catch(e) {
+    if (primaVolta) setMsg('Errore caricamento dati', 'err');
+  }
+}
+
+// alias per primo caricamento
+async function caricaMarkers() {
+  await sincronizzaMarkers(true);
+}
+
+// ─── Aggiunge un marker alla mappa e alla lista ───────────────────────────────
+function aggiungiAllaUI(m) {
+  const lat = parseFloat(m.lat);
+  const lng = parseFloat(m.lng);
+
+  const lm = L.marker([lat, lng], { icon: bluIcon })
+    .addTo(map)
+    .bindPopup(`<b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>`);
+
+  markers[m.id] = { data: m, leafletMarker: lm };
+  renderLista();
+}
+
+// ─── Aggiunge un nuovo marker (geocoding + salvataggio) ───────────────────────
+async function aggiungiMarker() {
+  const nome = document.getElementById('inp-nome').value.trim();
+  const pos  = document.getElementById('inp-pos').value.trim();
+
+  if (!nome || !pos) {
+    setMsg('Inserisci nome e posizione', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('btn-add');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Ricerca...';
+
+  let lat, lng, indirizzo;
+
+  // controlla se è lat,lng oppure indirizzo
+  const coordMatch = pos.match(/^(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    lat = parseFloat(coordMatch[1]);
+    lng = parseFloat(coordMatch[2]);
+    indirizzo = pos;
+  } else {
+    // geocoding via Nominatim
+    setMsg('Geocoding in corso...', 'inf');
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pos)}&format=json&limit=1&countrycodes=it`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+      const data = await res.json();
+      if (!data.length) {
+        setMsg('Posizione non trovata — prova con indirizzo più preciso o lat,lng', 'err');
+        ripristinaBttn();
+        return;
+      }
+      lat = parseFloat(data[0].lat);
+      lng = parseFloat(data[0].lon);
+      indirizzo = data[0].display_name;
+    } catch(e) {
+      setMsg('Errore geocoding', 'err');
+      ripristinaBttn();
+      return;
+    }
+  }
+
+  // salva sul server
+  try {
+    btn.innerHTML = '<span class="spin"></span>Salvo...';
+    const res = await fetch('/api/markers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, indirizzo, lat, lng })
+    });
+    if (!res.ok) throw new Error();
+    const m = await res.json();
+    aggiungiAllaUI(m);
+    aggiornaContatore();
+    map.setView([lat, lng], 13);
+    markers[m.id].leafletMarker.openPopup();
+    setMsg(`✓ "${nome}" aggiunto`, 'ok');
+    document.getElementById('inp-nome').value = '';
+    document.getElementById('inp-pos').value = '';
+  } catch(e) {
+    setMsg('Errore salvataggio', 'err');
+  }
+
+  ripristinaBttn();
+}
+
+// ─── Elimina marker ───────────────────────────────────────────────────────────
+async function eliminaMarker(id, e) {
+  e.stopPropagation();
+  if (!confirm('Eliminare questo punto?')) return;
+  try {
+    await fetch(`/api/markers/${id}`, { method: 'DELETE' });
+    map.removeLayer(markers[id].leafletMarker);
+    delete markers[id];
+    renderLista();
+    aggiornaContatore();
+  } catch(err) {
+    setMsg('Errore eliminazione', 'err');
+  }
+}
+
+// ─── Adatta vista a tutti i marker ───────────────────────────────────────────
+function adattaVista() {
+  const coords = Object.values(markers).map(m => [parseFloat(m.data.lat), parseFloat(m.data.lng)]);
+  if (!coords.length) return;
+  if (coords.length === 1) {
+    map.setView(coords[0], 13);
+  } else {
+    map.fitBounds(coords, { padding: [40, 40] });
+  }
+}
+
+// ─── Centra mappa su marker ───────────────────────────────────────────────────
+function centrareSu(id) {
+  const m = markers[id];
+  if (!m) return;
+  const { lat, lng } = m.data;
+  map.setView([parseFloat(lat), parseFloat(lng)], 14);
+  m.leafletMarker.openPopup();
+}
+
+// ─── Render lista sidebar ─────────────────────────────────────────────────────
+function renderLista() {
+  const lista = document.getElementById('marker-list');
+  const empty = document.getElementById('empty-msg');
+  const ids = Object.keys(markers);
+
+  if (!ids.length) {
+    lista.innerHTML = '';
+    lista.appendChild(empty);
+    empty.style.display = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  // ordine alfabetico per nome
+  ids.sort((a, b) => markers[a].data.nome.localeCompare(markers[b].data.nome, 'it'));
+  lista.innerHTML = ids.map(id => {
+    const m = markers[id].data;
+    const lat = parseFloat(m.lat).toFixed(4);
+    const lng = parseFloat(m.lng).toFixed(4);
+    return `
+      <div class="marker-item" onclick="centrareSu('${m.id}')">
+        <div class="marker-icon"></div>
+        <div class="marker-text">
+          <div class="marker-name">${esc(m.nome)}</div>
+          <div class="marker-addr">${esc(m.indirizzo) || '—'}</div>
+          <div class="marker-coords">${lat}, ${lng}</div>
+        </div>
+        <button class="btn-del" title="Elimina" onclick="eliminaMarker('${m.id}', event)">✕</button>
+      </div>`;
+  }).join('');
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function aggiornaContatore() {
+  document.getElementById('marker-count').textContent = Object.keys(markers).length;
+}
+
+function setMsg(txt, tipo) {
+  const el = document.getElementById('status-msg');
+  el.textContent = txt;
+  el.className = tipo === 'ok' ? 'msg-ok' : tipo === 'err' ? 'msg-err' : 'msg-inf';
+  if (tipo === 'ok') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function ripristinaBttn() {
+  const btn = document.getElementById('btn-add');
+  btn.disabled = false;
+  btn.innerHTML = '➕ Aggiungi';
+}
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// invio con Enter
+document.getElementById('inp-pos').addEventListener('keydown', e => {
+  if (e.key === 'Enter') aggiungiMarker();
+});
+document.getElementById('inp-nome').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('inp-pos').focus();
+});
+
+// ─── Avvio ────────────────────────────────────────────────────────────────────
+caricaMarkers();
+// polling: controlla il CSV ogni 5 secondi
+setInterval(() => sincronizzaMarkers(false), 5000);
+</script>
+</body>
+</html>
