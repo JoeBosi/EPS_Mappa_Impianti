@@ -557,7 +557,10 @@ async function verificaAccesso() {
     sessionStorage.setItem('eps_mappa_auth', '1');
     document.body.classList.remove('auth-locked');
     document.getElementById('login-screen').style.display = 'none';
-    setTimeout(() => map.invalidateSize(), 50);
+    setTimeout(() => {
+      map.invalidateSize();
+      adattaVista();
+    }, 50);
   } else {
     msg.textContent = 'Password non corretta';
     input.value = '';
@@ -572,6 +575,10 @@ function accessoConsentito() {
 if (accessoConsentito()) {
   document.body.classList.remove('auth-locked');
   document.getElementById('login-screen').style.display = 'none';
+  setTimeout(() => {
+    map.invalidateSize();
+    adattaVista();
+  }, 50);
 }
 
 document.getElementById('login-password').addEventListener('keydown', e => {
