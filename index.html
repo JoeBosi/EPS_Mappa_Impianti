@@ -20,6 +20,79 @@
       overflow: hidden;
     }
 
+    body.auth-locked #map-wrap,
+    body.auth-locked #sidebar {
+      display: none;
+    }
+
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0d47a1, #1565c0);
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    #login-card {
+      width: 100%;
+      max-width: 360px;
+      background: #fff;
+      border-radius: 18px;
+      padding: 28px 24px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.25);
+      text-align: center;
+    }
+
+    #login-card h2 {
+      font-size: 1.35rem;
+      color: #1565c0;
+      margin-bottom: 6px;
+    }
+
+    #login-card p {
+      color: #777;
+      font-size: .9rem;
+      margin-bottom: 18px;
+    }
+
+    #login-password {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+
+    #login-password:focus {
+      outline: none;
+      border-color: #1565c0;
+    }
+
+    #btn-login {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #1565c0;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+
+    #btn-login:hover { background: #0d47a1; }
+
+    #login-msg {
+      min-height: 1.2em;
+      margin-top: 10px;
+      font-size: .85rem;
+    }
+
     /* ───── PANNELLO SINISTRO (desktop) ───── */
     #sidebar {
       width: 320px;
@@ -404,7 +477,17 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-locked">
+
+<div id="login-screen">
+  <div id="login-card">
+    <h2>🔒 Accesso riservato</h2>
+    <p>Inserisci la password per accedere alla mappa</p>
+    <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button id="btn-login" onclick="verificaAccesso()">Accedi</button>
+    <div id="login-msg" class="msg-err"></div>
+  </div>
+</div>
 
 <!-- ═══════════════ MAPPA ═══════════════ -->
 <div id="map-wrap">
@@ -458,6 +541,43 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <script>
+const PASSWORD_HASH = '0af3ee1bbb4564a23ee6dfb25d657a900f064e84373f0697e0af6a6fb0f5ebf7';
+
+async function sha256(testo) {
+  const data = new TextEncoder().encode(testo);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verificaAccesso() {
+  const input = document.getElementById('login-password');
+  const msg = document.getElementById('login-msg');
+  const hash = await sha256(input.value);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('eps_mappa_auth', '1');
+    document.body.classList.remove('auth-locked');
+    document.getElementById('login-screen').style.display = 'none';
+    setTimeout(() => map.invalidateSize(), 50);
+  } else {
+    msg.textContent = 'Password non corretta';
+    input.value = '';
+    input.focus();
+  }
+}
+
+function accessoConsentito() {
+  return sessionStorage.getItem('eps_mappa_auth') === '1';
+}
+
+if (accessoConsentito()) {
+  document.body.classList.remove('auth-locked');
+  document.getElementById('login-screen').style.display = 'none';
+}
+
+document.getElementById('login-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verificaAccesso();
+});
+
 // ─── Mappa ───────────────────────────────────────────────────────────────────
 const map = L.map('map').setView([42.5, 12.5], 6);
 
@@ -576,6 +696,7 @@ async function caricaMarkers() {
 
 // ─── Aggiunge un nuovo marker (geocoding + salva nel delta) ──────────────────
 async function aggiungiMarker() {
+  if (!accessoConsentito()) return;
   const nome = document.getElementById('inp-nome').value.trim();
   const pos  = document.getElementById('inp-pos').value.trim();
 
@@ -631,6 +752,7 @@ async function aggiungiMarker() {
 
 // ─── Elimina marker ───────────────────────────────────────────────────────────
 function eliminaMarker(id, e) {
+  if (!accessoConsentito()) return;
   e.stopPropagation();
   if (!confirm('Eliminare questo punto?')) return;
   map.removeLayer(markers[id].leafletMarker);
