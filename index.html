@@ -862,7 +862,7 @@ function parseCSV(testo) {
     const valori = splitCSVRiga(linee[i]);
     if (valori.length < header.length) continue;
     const obj = {};
-    header.forEach((h, idx) => { obj[h.trim()] = valori[idx]; });
+    header.forEach((h, idx) => { obj[h.trim().toLowerCase()] = valori[idx]; });
     righe.push(obj);
   }
   return righe;
@@ -1285,23 +1285,49 @@ function renderListaFornitori() {
     return;
   }
 
-  ids.sort((a, b) => fornitori[a].data.nome.localeCompare(fornitori[b].data.nome, 'it'));
-  lista.innerHTML = ids.map(id => {
+  // Raggruppa per regione
+  const gruppi = {};
+  ids.forEach(id => {
     const f = fornitori[id].data;
-    const lat = parseFloat(f.lat).toFixed(4);
-    const lng = parseFloat(f.lng).toFixed(4);
-    const haNota = (f.note || '').trim().length > 0;
-    return `
+    const reg = (f.regione || '—').trim() || '—';
+    if (!gruppi[reg]) gruppi[reg] = [];
+    gruppi[reg].push(id);
+  });
+
+  // Ordina regioni e fornitori dentro ogni gruppo
+  const regioni = Object.keys(gruppi).sort((a, b) => a.localeCompare(b, 'it'));
+  regioni.forEach(reg => gruppi[reg].sort((a, b) => fornitori[a].data.nome.localeCompare(fornitori[b].data.nome, 'it')));
+
+  lista.innerHTML = regioni.map(reg => {
+    const items = gruppi[reg].map(id => {
+      const f = fornitori[id].data;
+      const lat = parseFloat(f.lat).toFixed(4);
+      const lng = parseFloat(f.lng).toFixed(4);
+      const haNota = (f.note || '').trim().length > 0;
+      return `
       <div class="marker-item" onclick="centrareSuFornitore('${f.id}')">
         <div class="marker-icon rosso"></div>
         <div class="marker-text">
           <div class="marker-name">${esc(f.nome)}</div>
-          <div class="marker-addr">${esc(f.indirizzo) || '—'}</div>
+          <div class="marker-addr">${esc(f.comune || f.indirizzo) || '—'}${f.provincia ? ' (' + esc(f.provincia) + ')' : ''}</div>
           <div class="marker-coords">${lat}, ${lng}${haNota ? ' · 📝' : ''}</div>
         </div>
         <button class="btn-del" title="Elimina" onclick="eliminaFornitore('${f.id}', event)">✕</button>
       </div>`;
+    }).join('');
+    const gid = 'grp-' + reg.replace(/\W/g, '_');
+    return `
+    <div class="regione-header" onclick="toggleRegione('${gid}')" style="padding:5px 10px;background:#fbe9e7;border-left:3px solid #c62828;font-size:.75rem;font-weight:700;color:#c62828;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+      <span>${esc(reg)}</span>
+      <span style="font-size:.7rem;color:#999">${gruppi[reg].length} ▾</span>
+    </div>
+    <div id="${gid}">${items}</div>`;
   }).join('');
+}
+
+function toggleRegione(gid) {
+  const el = document.getElementById(gid);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 
 // ─── Centra mappa su fornitore ────────────────────────────────────────────────
