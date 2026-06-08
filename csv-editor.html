@@ -1,111 +1,37 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Editor CSV — EPS Mappa</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Editor CSV</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
-
-    /* ── Login ── */
-    #login-screen {
-      position: fixed; inset: 0; background: rgba(0,0,0,.55);
-      display: flex; align-items: center; justify-content: center; z-index: 9999;
-    }
-    #login-box {
-      background: #fff; border-radius: 12px; padding: 32px 28px; width: 320px;
-      box-shadow: 0 8px 32px rgba(0,0,0,.18); text-align: center;
-    }
-    #login-box h2 { font-size: 1.1rem; margin-bottom: 16px; }
-    #login-password {
-      width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 8px;
-      font-size: .95rem; margin-bottom: 10px;
-    }
-    #btn-login {
-      width: 100%; padding: 9px; background: #1565c0; color: #fff; border: none;
-      border-radius: 8px; font-size: .95rem; cursor: pointer;
-    }
-    #login-msg { font-size: .8rem; color: #c62828; margin-top: 8px; min-height: 1.2em; }
-
-    /* ── Layout ── */
-    header {
-      background: #1565c0; color: #fff; padding: 12px 20px;
-      display: flex; align-items: center; gap: 12px;
-    }
-    header h1 { font-size: 1rem; font-weight: 600; }
-    header a { color: #90caf9; font-size: .82rem; text-decoration: none; }
-    header a:hover { text-decoration: underline; }
-    .spacer { flex: 1; }
-
-    main { max-width: 1100px; margin: 24px auto; padding: 0 16px 40px; }
-
-    /* ── File selector ── */
-    .file-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .file-tab {
-      padding: 6px 16px; border-radius: 20px; border: 2px solid #1565c0;
-      background: #fff; color: #1565c0; font-size: .82rem; cursor: pointer; font-weight: 600;
-    }
-    .file-tab.active { background: #1565c0; color: #fff; }
-
-    /* ── Toolbar ── */
-    .toolbar {
-      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-      background: #fff; padding: 10px 14px; border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px;
-    }
-    .toolbar button {
-      padding: 6px 14px; border: none; border-radius: 6px;
-      font-size: .8rem; cursor: pointer; font-weight: 600;
-    }
-    #btn-salva-gh { background: #2e7d32; color: #fff; }
-    #btn-salva-gh:disabled { background: #90a4ae; cursor: not-allowed; }
-    #btn-copia { background: #1565c0; color: #fff; }
-    #btn-aggiungi-riga { background: #e65100; color: #fff; }
-    #toolbar-msg { font-size: .78rem; color: #555; }
-
-    /* ── Token ── */
-    #token-area { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-    #token-area label { font-size: .72rem; color: #666; white-space: nowrap; }
-    #inp-token { padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: .78rem; width: 180px; }
-    #btn-salva-token { padding: 5px 10px; background: #555; color: #fff; border: none; border-radius: 6px; font-size: .75rem; cursor: pointer; }
-    #token-stato { font-size: .7rem; color: #888; white-space: nowrap; }
-
-    /* ── Tabella ── */
-    .table-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    table { width: 100%; border-collapse: collapse; background: #fff; font-size: .8rem; }
-    th {
-      background: #1565c0; color: #fff; padding: 8px 10px;
-      text-align: left; font-weight: 600; white-space: nowrap; position: sticky; top: 0;
-    }
-    td { padding: 0; border-bottom: 1px solid #eee; vertical-align: top; }
-    tr:hover td { background: #f5f9ff; }
-    td input, td textarea {
-      width: 100%; padding: 6px 8px; border: none; background: transparent;
-      font-size: .79rem; font-family: inherit; resize: vertical;
-      outline: none; color: #333;
-    }
-    td input:focus, td textarea:focus { background: #fffde7; }
-    td.col-note textarea { min-height: 60px; }
-    td.col-id input { width: 50px; color: #888; }
-    .btn-del-riga {
-      padding: 3px 8px; background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;
-      border-radius: 4px; font-size: .72rem; cursor: pointer; white-space: nowrap; margin: 4px;
-    }
-    .stato-riga { font-size: .65rem; color: #aaa; padding: 2px 6px; }
-    .stato-riga.modificata { color: #e65100; font-weight: 600; }
-
-    /* ── Raw textarea ── */
-    #raw-wrap { display: none; }
-    #raw-csv {
-      width: 100%; min-height: 400px; font-family: monospace; font-size: .78rem;
-      border: 1px solid #ccc; border-radius: 8px; padding: 12px; background: #fafafa;
-      resize: vertical;
-    }
-    #btn-toggle-raw {
-      padding: 6px 14px; background: #607d8b; color: #fff;
-      border: none; border-radius: 6px; font-size: .8rem; cursor: pointer; font-weight: 600;
-    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f5f5f5;display:flex;flex-direction:column;height:100dvh}
+    #login-screen{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:99}
+    #login-box{background:#fff;border-radius:10px;padding:28px 24px;width:300px;text-align:center}
+    #login-box h2{font-size:1rem;margin-bottom:14px}
+    #login-password{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:.95rem;margin-bottom:10px}
+    #btn-login{width:100%;padding:8px;background:#1565c0;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem}
+    #login-msg{font-size:.78rem;color:#c62828;margin-top:6px;min-height:1em}
+    header{background:#1565c0;color:#fff;padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+    header h1{font-size:.95rem;font-weight:600}
+    header a{color:#90caf9;font-size:.8rem;text-decoration:none}
+    header a:hover{text-decoration:underline}
+    .spacer{flex:1}
+    .bar{background:#fff;border-bottom:1px solid #ddd;padding:7px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+    .bar select{padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:.82rem}
+    .bar button{padding:6px 14px;border:none;border-radius:6px;font-size:.82rem;cursor:pointer;font-weight:600}
+    #btn-load{background:#1565c0;color:#fff}
+    #btn-save{background:#2e7d32;color:#fff}
+    #btn-save:disabled{background:#90a4ae;cursor:not-allowed}
+    #btn-copy{background:#607d8b;color:#fff}
+    #msg{font-size:.78rem;color:#555}
+    .token-row{display:flex;align-items:center;gap:6px;margin-left:auto}
+    .token-row label{font-size:.72rem;color:#666;white-space:nowrap}
+    .token-row input{padding:5px 8px;border:1px solid #ccc;border-radius:6px;font-size:.78rem;width:170px}
+    .token-row button{padding:5px 10px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer}
+    #token-stato{font-size:.7rem;white-space:nowrap}
+    #editor{flex:1;display:block;width:100%;padding:12px;font-family:monospace;font-size:.8rem;border:none;outline:none;resize:none;background:#fff;line-height:1.5}
   </style>
 </head>
 <body>
@@ -113,334 +39,128 @@
 <div id="login-screen">
   <div id="login-box">
     <h2>🔒 Accesso riservato</h2>
-    <input id="login-password" type="password" placeholder="Password" autofocus />
-    <button id="btn-login" onclick="verificaAccesso()">Entra</button>
+    <input id="login-password" type="password" placeholder="Password" autofocus/>
+    <button id="btn-login" onclick="login()">Entra</button>
     <div id="login-msg"></div>
   </div>
 </div>
 
 <header>
-  <h1>📋 Editor CSV — EPS Mappa</h1>
-  <a href="index.html">← Torna alla mappa</a>
-  <span class="spacer"></span>
-  <span id="header-file" style="font-size:.8rem;opacity:.8"></span>
+  <h1>📋 Editor CSV</h1>
+  <a href="index.html">← Mappa</a>
 </header>
 
-<main>
-  <div class="file-tabs">
-    <button class="file-tab active" onclick="caricaFile('fornitori.csv', this)">fornitori.csv</button>
-    <button class="file-tab" onclick="caricaFile('markers.csv', this)">markers.csv</button>
+<div class="bar">
+  <select id="sel-file">
+    <option value="fornitori.csv">fornitori.csv</option>
+    <option value="markers.csv">markers.csv</option>
+  </select>
+  <button id="btn-load" onclick="carica()">⬇ Carica da GitHub</button>
+  <button id="btn-save" onclick="salva()" disabled>💾 Salva su GitHub</button>
+  <button id="btn-copy" onclick="copia()">📋 Copia</button>
+  <span id="msg"></span>
+  <div class="token-row">
+    <label>Token GitHub:</label>
+    <input id="inp-token" type="password" placeholder="ghp_..."/>
+    <button onclick="salvaToken()">Salva</button>
+    <span id="token-stato"></span>
   </div>
+</div>
 
-  <div class="toolbar">
-    <button id="btn-salva-gh" onclick="salvaSuGitHub()">💾 Salva su GitHub</button>
-    <button id="btn-copia" onclick="copiaCsv()">📋 Copia CSV</button>
-    <button id="btn-aggiungi-riga" onclick="aggiungiRiga()">➕ Nuova riga</button>
-    <button id="btn-toggle-raw" onclick="toggleRaw()">🔤 Mostra raw</button>
-    <span id="toolbar-msg"></span>
-    <div id="token-area">
-      <label for="inp-token">Token GitHub:</label>
-      <input id="inp-token" type="password" placeholder="ghp_..." />
-      <button id="btn-salva-token" onclick="salvaToken()">Salva</button>
-      <span id="token-stato"></span>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <table id="csv-table">
-      <thead id="csv-thead"></thead>
-      <tbody id="csv-tbody"></tbody>
-    </table>
-  </div>
-
-  <div id="raw-wrap" style="margin-top:16px">
-    <textarea id="raw-csv" spellcheck="false"></textarea>
-  </div>
-</main>
+<textarea id="editor" spellcheck="false" placeholder="Clicca 'Carica da GitHub' per caricare il file..."></textarea>
 
 <script>
-// ── Auth ──────────────────────────────────────────────────────────────────────
-const PASSWORD_HASH = '0af3ee1bbb4564a23ee6dfb25d657a900f064e84373f0697e0af6a6fb0f5ebf7';
+const PW_HASH = '0af3ee1bbb4564a23ee6dfb25d657a900f064e84373f0697e0af6a6fb0f5ebf7';
 const LS_TOKEN = 'eps_gh_token';
-const GH_OWNER = 'JoeBosi';
-const GH_REPO  = 'EPS_Mappa_Impianti';
+const GH_OWNER = 'JoeBosi', GH_REPO = 'EPS_Mappa_Impianti';
+let currentSha = '';
 
-async function sha256(txt) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+async function sha256(t){
+  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
 }
-
-async function verificaAccesso() {
-  const input = document.getElementById('login-password');
-  const msg   = document.getElementById('login-msg');
-  const hash  = await sha256(input.value);
-  if (hash === PASSWORD_HASH) {
-    sessionStorage.setItem('eps_mappa_auth', '1');
-    document.getElementById('login-screen').style.display = 'none';
-    init();
+async function login(){
+  const pw=document.getElementById('login-password').value;
+  if(await sha256(pw)===PW_HASH){
+    sessionStorage.setItem('eps_mappa_auth','1');
+    document.getElementById('login-screen').style.display='none';
+    aggiornaTkStato();
   } else {
-    msg.textContent = 'Password non corretta';
-    input.value = '';
-    input.focus();
+    document.getElementById('login-msg').textContent='Password non corretta';
+    document.getElementById('login-password').value='';
   }
 }
-
-document.getElementById('login-password').addEventListener('keydown', e => {
-  if (e.key === 'Enter') verificaAccesso();
-});
-
-if (sessionStorage.getItem('eps_mappa_auth') === '1') {
-  document.getElementById('login-screen').style.display = 'none';
-  init();
+document.getElementById('login-password').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+if(sessionStorage.getItem('eps_mappa_auth')==='1'){
+  document.getElementById('login-screen').style.display='none';
+  aggiornaTkStato();
 }
 
-// ── Token ─────────────────────────────────────────────────────────────────────
-function getToken() { return localStorage.getItem(LS_TOKEN) || ''; }
-
-function salvaToken() {
-  const v = document.getElementById('inp-token').value.trim();
-  if (!v) return;
-  localStorage.setItem(LS_TOKEN, v);
-  document.getElementById('inp-token').value = '';
-  aggiornaStatoToken();
+function getToken(){return localStorage.getItem(LS_TOKEN)||'';}
+function salvaToken(){
+  const v=document.getElementById('inp-token').value.trim();
+  if(!v)return;
+  localStorage.setItem(LS_TOKEN,v);
+  document.getElementById('inp-token').value='';
+  aggiornaTkStato();
+}
+function aggiornaTkStato(){
+  const el=document.getElementById('token-stato');
+  const ok=!!getToken();
+  el.textContent=ok?'✓ presente':'⚠ mancante';
+  el.style.color=ok?'#2e7d32':'#c62828';
 }
 
-function aggiornaStatoToken() {
-  const el = document.getElementById('token-stato');
-  const t  = getToken();
-  el.textContent = t ? '✓ Token presente' : '⚠ Nessun token';
-  el.style.color = t ? '#2e7d32' : '#c62828';
+function setMsg(t,c){const el=document.getElementById('msg');el.textContent=t;el.style.color=c||'#555';}
+
+async function carica(){
+  const file=document.getElementById('sel-file').value;
+  setMsg('⏳ Caricamento...','#555');
+  try{
+    const res=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${file}`);
+    if(!res.ok)throw new Error('Errore '+res.status);
+    const info=await res.json();
+    currentSha=info.sha;
+    let csv=atob(info.content.replace(/\n/g,''));
+    csv=csv.replace(/^ï»¿/,'').replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    document.getElementById('editor').value=csv;
+    document.getElementById('btn-save').disabled=false;
+    setMsg('✓ Caricato','#2e7d32');
+  }catch(e){setMsg('⚠ '+e.message,'#c62828');}
 }
 
-// ── CSV parsing ───────────────────────────────────────────────────────────────
-function parseCSV(testo) {
-  const righe = [];
-  let i = 0;
-  while (i < testo.length) {
-    const riga = [];
-    while (i < testo.length && testo[i] !== '\n') {
-      if (testo[i] === '"') {
-        let val = ''; i++;
-        while (i < testo.length) {
-          if (testo[i] === '"' && testo[i+1] === '"') { val += '"'; i += 2; }
-          else if (testo[i] === '"') { i++; break; }
-          else { val += testo[i++]; }
-        }
-        riga.push(val);
-        if (testo[i] === ',') i++;
-      } else {
-        let val = '';
-        while (i < testo.length && testo[i] !== ',' && testo[i] !== '\n') val += testo[i++];
-        riga.push(val);
-        if (testo[i] === ',') i++;
-      }
-    }
-    if (testo[i] === '\n') i++;
-    if (riga.length > 0) righe.push(riga);
-  }
-  return righe;
-}
+async function salva(){
+  const token=getToken();
+  if(!token){setMsg('⚠ Inserisci prima il token GitHub','#c62828');return;}
+  const file=document.getElementById('sel-file').value;
+  const csv=document.getElementById('editor').value;
+  const btn=document.getElementById('btn-save');
+  btn.disabled=true; btn.textContent='⏳ Salvataggio...';
+  setMsg('','');
+  try{
+    // Rileggo SHA aggiornato
+    const gr=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${file}`,
+      {headers:{'Authorization':'token '+token}});
+    if(!gr.ok)throw new Error('Lettura fallita (token errato?)');
+    currentSha=(await gr.json()).sha;
 
-function csvQuota(v) {
-  if (v === null || v === undefined) v = '';
-  v = String(v);
-  return (v.includes(',') || v.includes('"') || v.includes('\n')) ? '"' + v.replace(/"/g, '""') + '"' : v;
-}
-
-function righeToCSV(righe) {
-  return righe.map(r => r.map(csvQuota).join(',')).join('\n') + '\n';
-}
-
-// ── Stato ─────────────────────────────────────────────────────────────────────
-let currentFile = 'fornitori.csv';
-let currentSha  = '';
-let headers     = [];
-let righe       = []; // array di array
-let rawMode     = false;
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-function init() {
-  aggiornaStatoToken();
-  caricaFile('fornitori.csv', document.querySelector('.file-tab.active'));
-}
-
-// ── Carica file da GitHub ─────────────────────────────────────────────────────
-async function caricaFile(filename, tabEl) {
-  document.querySelectorAll('.file-tab').forEach(t => t.classList.remove('active'));
-  if (tabEl) tabEl.classList.add('active');
-  currentFile = filename;
-  document.getElementById('header-file').textContent = filename;
-  setMsg('⏳ Caricamento...', '#555');
-
-  try {
-    const res  = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${filename}`);
-    if (!res.ok) throw new Error('File non trovato (' + res.status + ')');
-    const info = await res.json();
-    currentSha = info.sha;
-    let csv = atob(info.content.replace(/\n/g,''));
-    csv = csv.replace(/^ï»¿/,'').replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-    if (csv.endsWith('\n')) csv = csv.slice(0, -1);
-
-    const parsed = parseCSV(csv);
-    headers = parsed[0] || [];
-    righe   = parsed.slice(1);
-
-    renderTabella();
-    if (rawMode) aggiornaRaw();
-    setMsg('✓ Caricato da GitHub', '#2e7d32');
-  } catch(e) {
-    setMsg('⚠ ' + e.message, '#c62828');
-  }
-}
-
-// ── Render tabella ────────────────────────────────────────────────────────────
-function renderTabella() {
-  const thead = document.getElementById('csv-thead');
-  const tbody = document.getElementById('csv-tbody');
-
-  thead.innerHTML = '<tr>' + headers.map(h =>
-    `<th>${h}</th>`
-  ).join('') + '<th></th></tr>';
-
-  tbody.innerHTML = '';
-  righe.forEach((riga, ri) => {
-    const tr = document.createElement('tr');
-    tr.dataset.ri = ri;
-
-    headers.forEach((h, ci) => {
-      const td = document.createElement('td');
-      const val = riga[ci] || '';
-      if (h === 'note' || val.includes('\n') || val.length > 80) {
-        td.className = 'col-note';
-        const ta = document.createElement('textarea');
-        ta.value = val;
-        ta.rows = Math.max(2, val.split('\n').length);
-        ta.addEventListener('input', () => { righe[ri][ci] = ta.value; marcaModificata(tr); aggiornaRaw(); });
-        td.appendChild(ta);
-      } else {
-        td.className = h === 'id' ? 'col-id' : '';
-        const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.value = val;
-        inp.addEventListener('input', () => { righe[ri][ci] = inp.value; marcaModificata(tr); aggiornaRaw(); });
-        td.appendChild(inp);
-      }
-      tr.appendChild(td);
+    const b64=btoa(unescape(encodeURIComponent(csv)));
+    const pr=await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${file}`,{
+      method:'PUT',
+      headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({message:`editor: aggiorna ${file}`,content:b64,sha:currentSha})
     });
-
-    // Colonna azioni
-    const tdAz = document.createElement('td');
-    tdAz.style.whiteSpace = 'nowrap';
-    tdAz.innerHTML = `<button class="btn-del-riga" onclick="eliminaRiga(${ri})">✕</button>`;
-    const stato = document.createElement('div');
-    stato.className = 'stato-riga';
-    stato.textContent = '';
-    tdAz.appendChild(stato);
-    tr.appendChild(tdAz);
-
-    tbody.appendChild(tr);
-  });
+    if(!pr.ok){const e=await pr.json();throw new Error(e.message||'Errore PUT');}
+    const data=await pr.json();
+    currentSha=data.content.sha;
+    setMsg('✓ Salvato su GitHub alle '+new Date().toLocaleTimeString(),'#2e7d32');
+  }catch(e){setMsg('⚠ '+e.message,'#c62828');}
+  finally{btn.disabled=false;btn.textContent='💾 Salva su GitHub';}
 }
 
-function marcaModificata(tr) {
-  const stato = tr.querySelector('.stato-riga');
-  if (stato) { stato.textContent = 'modificata'; stato.className = 'stato-riga modificata'; }
-}
-
-// ── Aggiungi/elimina riga ─────────────────────────────────────────────────────
-function aggiungiRiga() {
-  const newId = righe.length ? (Math.max(...righe.map(r => parseInt(r[0])||0)) + 1) : 1;
-  const nuova = headers.map((h, i) => i === 0 ? String(newId) : '');
-  righe.push(nuova);
-  renderTabella();
-  aggiornaRaw();
-  // Scrolla in fondo
-  document.querySelector('.table-wrap').scrollTop = 99999;
-}
-
-function eliminaRiga(ri) {
-  if (!confirm('Eliminare questa riga?')) return;
-  righe.splice(ri, 1);
-  renderTabella();
-  aggiornaRaw();
-}
-
-// ── Raw mode ──────────────────────────────────────────────────────────────────
-function toggleRaw() {
-  rawMode = !rawMode;
-  document.getElementById('raw-wrap').style.display = rawMode ? 'block' : 'none';
-  document.getElementById('btn-toggle-raw').textContent = rawMode ? '📊 Mostra tabella' : '🔤 Mostra raw';
-  if (rawMode) aggiornaRaw();
-}
-
-function aggiornaRaw() {
-  if (!rawMode) return;
-  const tutte = [headers, ...righe];
-  document.getElementById('raw-csv').value = righeToCSV(tutte);
-}
-
-// ── Copia CSV ─────────────────────────────────────────────────────────────────
-function copiaCsv() {
-  const tutte = [headers, ...righe];
-  const csv   = righeToCSV(tutte);
-  navigator.clipboard.writeText(csv).then(() => setMsg('✓ Copiato negli appunti', '#2e7d32'));
-}
-
-// ── Salva su GitHub ───────────────────────────────────────────────────────────
-async function salvaSuGitHub() {
-  const token = getToken();
-  if (!token) { setMsg('⚠ Inserisci il token GitHub prima di salvare', '#c62828'); return; }
-
-  const btn = document.getElementById('btn-salva-gh');
-  btn.disabled = true;
-  btn.textContent = '⏳ Salvataggio...';
-  setMsg('', '');
-
-  try {
-    // Prima rileggo il SHA aggiornato
-    const getRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${currentFile}`,
-      { headers: { 'Authorization': 'token ' + token } });
-    if (!getRes.ok) throw new Error('Errore lettura file (token errato?)');
-    const info = await getRes.json();
-    currentSha = info.sha;
-
-    const tutte  = [headers, ...righe];
-    const csv    = righeToCSV(tutte);
-    const b64    = btoa(unescape(encodeURIComponent(csv)));
-
-    const putRes = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${currentFile}`, {
-      method: 'PUT',
-      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `editor: aggiorna ${currentFile}`,
-        content: b64,
-        sha: currentSha
-      })
-    });
-
-    if (!putRes.ok) {
-      const err = await putRes.json();
-      throw new Error(err.message || 'Errore PUT');
-    }
-    const data = await putRes.json();
-    currentSha = data.content.sha;
-    setMsg('✓ Salvato su GitHub alle ' + new Date().toLocaleTimeString(), '#2e7d32');
-    // Rimuovi marcatori "modificata"
-    document.querySelectorAll('.stato-riga.modificata').forEach(el => {
-      el.textContent = ''; el.className = 'stato-riga';
-    });
-  } catch(e) {
-    setMsg('⚠ ' + e.message, '#c62828');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '💾 Salva su GitHub';
-  }
-}
-
-// ── Utils ─────────────────────────────────────────────────────────────────────
-function setMsg(t, c) {
-  const el = document.getElementById('toolbar-msg');
-  el.textContent = t; el.style.color = c;
+function copia(){
+  navigator.clipboard.writeText(document.getElementById('editor').value)
+    .then(()=>setMsg('✓ Copiato negli appunti','#2e7d32'));
 }
 </script>
 </body>
