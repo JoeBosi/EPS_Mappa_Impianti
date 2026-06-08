@@ -209,11 +209,24 @@
       font-weight: 700;
     }
 
-    #marker-list {
+    #marker-list, #fornitore-list {
       flex: 1;
       overflow-y: auto;
       padding: 2px 6px 8px;
       -webkit-overflow-scrolling: touch;
+      min-height: 0;
+    }
+
+    .sidebar-half {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .sidebar-half + .sidebar-half {
+      border-top: 2px solid #e0e0e0;
     }
 
     .marker-item {
@@ -634,7 +647,10 @@
     @media (min-width: 641px) {
       #drawer-handle { display: none; }
       #sidebar-inner {
-        display: contents;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
       }
     }
   </style>
@@ -671,68 +687,46 @@
   </div>
 
   <div id="sidebar-inner">
-    <div id="sidebar-header">
-      <h1>📍 Mappa Impianti</h1>
-      <p>Aggiungi e gestisci i tuoi punti</p>
-      <p id="sync-time" style="font-size:.7rem;opacity:.65;margin-top:4px;"></p>
-    </div>
 
-    <div id="form-box">
-      <label for="inp-nome">Nome</label>
-      <input id="inp-nome" type="text" placeholder="es. Stabilimento Nord" autocomplete="off" />
-
-      <label for="inp-pos">Posizione</label>
-      <input id="inp-pos" type="text" placeholder="es. Via Roma 1, Milano" autocomplete="off" />
-      <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
-
-      <button id="btn-add" onclick="aggiungiMarker()">➕ Aggiungi</button>
-      <div id="status-msg"></div>
-    </div>
-
-    <div class="sezione-titolo">
-      Impianti
-      <span id="marker-count" class="sezione-badge blu">0</span>
-    </div>
-
-    <div id="marker-list">
-      <div id="empty-msg">Nessun punto ancora</div>
-    </div>
-
-    <div class="sezione-titolo rosso">
-      Fornitori
-      <span id="fornitore-count" class="sezione-badge rosso">0</span>
-    </div>
-
-    <div id="form-fornitore">
-      <label for="inp-forn-nome">Nome fornitore</label>
-      <input id="inp-forn-nome" type="text" placeholder="es. Fornitore Pannelli Srl" autocomplete="off" />
-
-      <label for="inp-forn-pos">Posizione</label>
-      <input id="inp-forn-pos" type="text" placeholder="es. Via Roma 1, Milano" autocomplete="off" />
-      <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
-
-      <button id="btn-add-fornitore" onclick="aggiungiFornitore()">➕ Aggiungi fornitore</button>
-      <div id="status-msg-fornitore"></div>
-    </div>
-
-    <div id="fornitore-list">
-      <div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>
-    </div>
-
-    <div class="sezione-titolo" style="color:#555">
-      Impostazioni
-    </div>
-    <div style="padding:6px 10px 8px">
-      <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" style="display:inline-block;padding:5px 12px;background:#455a64;color:#fff;border-radius:6px;font-size:.75rem;font-weight:600;text-decoration:none">📋 Editor CSV</a>
-    </div>
-    <div id="form-token">
-      <label for="inp-gh-token">GitHub Token (PAT)</label>
-      <div style="display:flex;gap:4px">
-        <input id="inp-gh-token" type="password" placeholder="ghp_..." autocomplete="off" style="flex:1;margin-bottom:0" />
-        <button onclick="salvaToken()" style="padding:6px 8px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer;white-space:nowrap">Salva</button>
+    <!-- METÀ SUPERIORE: IMPIANTI -->
+    <div class="sidebar-half">
+      <div class="sezione-titolo">
+        Impianti
+        <span id="marker-count" class="sezione-badge blu">0</span>
       </div>
-      <div id="token-status" style="font-size:.68rem;margin-top:3px;color:#888"></div>
+      <div id="marker-list">
+        <div id="empty-msg">Nessun punto ancora</div>
+      </div>
     </div>
+
+    <!-- METÀ INFERIORE: FORNITORI -->
+    <div class="sidebar-half">
+      <div class="sezione-titolo rosso">
+        Fornitori
+        <span id="fornitore-count" class="sezione-badge rosso">0</span>
+      </div>
+      <div id="fornitore-list">
+        <div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>
+      </div>
+      <div style="padding:4px 10px 4px;border-top:1px solid #eee;flex-shrink:0;display:flex;align-items:center;gap:6px">
+        <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" style="padding:4px 10px;background:#455a64;color:#fff;border-radius:6px;font-size:.72rem;font-weight:600;text-decoration:none;white-space:nowrap">📋 CSV</a>
+        <div id="token-status" style="font-size:.65rem;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      </div>
+      <div id="form-token" style="padding:4px 10px 8px;flex-shrink:0">
+        <div style="display:flex;gap:4px">
+          <input id="inp-gh-token" type="password" placeholder="GitHub Token (ghp_...)" autocomplete="off" style="flex:1;margin-bottom:0;font-size:.74rem;padding:5px 8px;border:1px solid #ccc;border-radius:6px" />
+          <button onclick="salvaToken()" style="padding:5px 8px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.72rem;cursor:pointer;white-space:nowrap">Salva</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campi nascosti mantenuti per compatibilità JS -->
+    <div style="display:none">
+      <input id="inp-nome" /><input id="inp-pos" /><div id="status-msg"></div>
+      <input id="inp-forn-nome" /><input id="inp-forn-pos" /><div id="status-msg-fornitore"></div>
+      <p id="sync-time"></p>
+    </div>
+
   </div>
 </div>
 
