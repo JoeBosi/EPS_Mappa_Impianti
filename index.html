@@ -905,7 +905,7 @@ function aggiungiFornitoreAllaUI(f) {
   const nota = (noteLeggi()[f.id] || f.note || '');
   const lm = L.marker([lat, lng], { icon: redIcon })
     .addTo(map)
-    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || '', f.tel || '', f.email || '', f.regione || '', f.provincia || '', f.comune || ''), { maxWidth: 360, minWidth: 300 });
+    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || '', f.telefono || f.tel || '', f.email || '', f.regione || '', f.provincia || '', f.comune || ''), { maxWidth: 360, minWidth: 300 });
   fornitori[f.id] = { data: { ...f, note: nota }, leafletMarker: lm };
 }
 
