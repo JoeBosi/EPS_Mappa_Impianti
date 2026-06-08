@@ -1188,10 +1188,31 @@ async function salvaStatoNota(id) {
     
     setMsg_('✓ Salvato su GitHub', '#2e7d32');
     if (btn) { btn.textContent = '✓ Salvato'; btn.disabled = false; }
+    
+    // Aggiorna marker con nuova icona
+    const f = fornitori[id] && fornitori[id].data;
+    if (f && fornitori[id].leafletMarker) {
+      const newIcon = getIconByStato(stato);
+      fornitori[id].leafletMarker.setIcon(newIcon);
+      
+      // Aggiorna popup con nuovi dati
+      const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
+      fornitori[id].leafletMarker.setPopupContent(
+        buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, f.note || '', f.sito_web || '', f.tel || '', f.email || '', f.regione || '', f.provincia || '', f.comune || '', stato, nota)
+      );
+    }
+    
+    // Chiudi popup dopo 1 secondo
     setTimeout(() => {
+      if (fornitori[id] && fornitori[id].leafletMarker) {
+        fornitori[id].leafletMarker.closePopup();
+      }
       if (btn) btn.textContent = '💾 Salva stato & nota';
       if (msgEl) msgEl.textContent = '';
-    }, 3000);
+    }, 1000);
+    
+    // Aggiorna lista laterale
+    renderListaFornitori();
     
   } catch(e) {
     setMsg_('⚠ Errore: ' + e.message, '#c62828');
