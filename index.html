@@ -965,30 +965,26 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
   const geo = [comune, provincia ? `(${provincia})` : '', regione].filter(Boolean).join(' ');
   const geoHtml = geo ? `<span style="font-size:.75rem;color:#888">📍 ${esc(geo)}</span><br>` : '';
   
-  // Stato e Nota richiesta (raggruppati consecutivamente)
-  let statoNotaHtml = '';
-  if (stato_richiesta) {
-    const statoColor = {
-      'Attesa Risposta': '#c62828',
-      'No': '#212121',
-      'Non Adesso': '#7b1fa2',
-      'Ok': '#2e7d32'
-    }[stato_richiesta] || '#666';
-    const statoBadge = `<span style="display:inline-block;background:${statoColor};color:#fff;font-size:.72rem;padding:2px 8px;border-radius:12px;font-weight:600">${esc(stato_richiesta)}</span>`;
-    const notaHtml = nota_richiesta ? `<div style="font-size:.75rem;color:#444;margin-top:4px;padding-left:4px;border-left:2px solid ${statoColor}">${esc(nota_richiesta)}</div>` : '';
-    statoNotaHtml = `<div style="margin-bottom:6px">${statoBadge}${notaHtml}</div>`;
-  } else if (nota_richiesta) {
-    // Solo nota senza stato
-    statoNotaHtml = `<div style="background:#f5f5f5;border-left:3px solid #1565c0;padding:6px 8px;margin:6px 0;font-size:.75rem;color:#444"><b>📋 Nota:</b> ${esc(nota_richiesta)}</div>`;
-  }
+  // Stato e Nota richiesta - EDITABILI
+  const statoOptions = ['', 'Attesa Risposta', 'No', 'Non Adesso', 'Ok'];
+  const statoSelect = `<select id="stato-${id}" style="font-size:.78rem;padding:2px 6px;border-radius:4px;border:1px solid #ccc;margin-bottom:4px">
+    ${statoOptions.map(opt => `<option value="${opt}" ${stato_richiesta === opt ? 'selected' : ''}>${opt || '(nessuno)'}</option>`).join('')}
+  </select>`;
+  const notaInput = `<textarea id="nota-richiesta-${id}" placeholder="Nota richiesta..." style="font-size:.75rem;padding:4px 6px;border-radius:4px;border:1px solid #ccc;width:100%;min-height:40px;margin-bottom:6px">${esc(nota_richiesta || '')}</textarea>`;
   
   const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-  const editUrl = `csv-editor.html?file=fornitori.csv&row=${id}`;
-  return `<div style="font-size:.85rem;position:relative;padding-right:54px">
-<a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:28px;font-size:1.1rem;text-decoration:none">📍</a>
-<a href="${editUrl}" target="_blank" title="Modifica in Editor CSV" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">�</a>
+  return `<div style="font-size:.85rem;position:relative;padding-right:28px">
+<a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">📍</a>
 <b style="color:#c62828;font-size:.95rem">${esc(nome)}</b><br>
-${statoNotaHtml}<span style="color:#555">${esc(indirizzo)}</span><br>
+<div style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:8px;margin:6px 0">
+  <div style="font-size:.7rem;color:#666;margin-bottom:2px">📋 Stato Richiesta:</div>
+  ${statoSelect}
+  <div style="font-size:.7rem;color:#666;margin-top:4px;margin-bottom:2px">📝 Nota:</div>
+  ${notaInput}
+  <button class="btn-salva-stato-nota" onclick="salvaStatoNota('${id}')" style="margin-top:4px;font-size:.75rem;padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer">💾 Salva stato & nota</button>
+  <div id="stato-nota-msg-${id}" style="font-size:.7rem;min-height:1em;margin-top:2px"></div>
+</div>
+<span style="color:#555">${esc(indirizzo)}</span><br>
 ${geoHtml}${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
 <textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
 <div id="nota-msg-${id}" style="font-size:.72rem;min-height:1em;text-align:center;margin-top:3px"></div>
@@ -1112,6 +1108,94 @@ async function salvaNotaFornitore(id) {
   } catch(e) {
     setMsg_('⚠ Errore: ' + e.message, '#c62828');
     if (btn) { btn.textContent = '💾 Salva nota su GitHub'; btn.disabled = false; }
+  }
+}
+
+async function salvaStatoNota(id) {
+  const statoEl = document.getElementById('stato-' + id);
+  const notaEl = document.getElementById('nota-richiesta-' + id);
+  if (!statoEl || !notaEl) return;
+  
+  const stato = statoEl.value;
+  const nota = notaEl.value;
+  
+  const btn = document.querySelector('.btn-salva-stato-nota');
+  const msgEl = document.getElementById('stato-nota-msg-' + id);
+  const setMsg_ = (t, c) => { if (msgEl) { msgEl.textContent = t; msgEl.style.color = c; } };
+  
+  // Aggiorna localmente
+  if (fornitori[id]) {
+    fornitori[id].data.stato_richiesta = stato;
+    fornitori[id].data.nota_richiesta = nota;
+  }
+  
+  let token = getToken();
+  if (!token) { setMsg_('⚠ Token GitHub mancante', '#c62828'); return; }
+  
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvataggio...'; }
+  setMsg_('', '');
+  
+  try {
+    const apiBase = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+    const headers = { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' };
+    
+    const infoRes = await fetch(apiBase, { headers });
+    if (!infoRes.ok) throw new Error('Impossibile leggere il file dal repo');
+    const info = await infoRes.json();
+    const sha = info.sha;
+    let csvAttuale = atob(info.content.replace(/\n/g, ''));
+    csvAttuale = csvAttuale.replace(/^\uFEFF/, '').replace(/^\xEF\xBB\xBF/, '').replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    const righe = csvAttuale.split('\n');
+    const header = righe[0];
+    const cols = header.split(',');
+    const idxId = cols.indexOf('id');
+    const idxStato = cols.indexOf('stato_richiesta');
+    const idxNota = cols.indexOf('nota_richiesta');
+    if (idxId < 0 || idxStato < 0 || idxNota < 0) throw new Error('Colonne stato_richiesta/nota_richiesta non trovate');
+    
+    const csvQuota = v => (v.includes(',') || v.includes('"') || v.includes('\n'))
+      ? '"' + v.replace(/"/g, '""') + '"' : v;
+    
+    const nuoveRighe = righe.map((riga, i) => {
+      if (i === 0 || !riga.trim()) return riga;
+      const valori = splitCSVRiga(riga);
+      if (valori[idxId] === String(id)) {
+        valori[idxStato] = stato;
+        valori[idxNota] = nota;
+        return valori.map(csvQuota).join(',');
+      }
+      return riga;
+    });
+    
+    const nuovoCsv = nuoveRighe.join('\n');
+    const nuovoB64 = btoa(unescape(encodeURIComponent(nuovoCsv)));
+    
+    const putRes = await fetch(apiBase, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        message: `aggiorna stato/nota fornitore id=${id}`,
+        content: nuovoB64,
+        sha
+      })
+    });
+    
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || 'Errore PUT');
+    }
+    
+    setMsg_('✓ Salvato su GitHub', '#2e7d32');
+    if (btn) { btn.textContent = '✓ Salvato'; btn.disabled = false; }
+    setTimeout(() => {
+      if (btn) btn.textContent = '💾 Salva stato & nota';
+      if (msgEl) msgEl.textContent = '';
+    }, 3000);
+    
+  } catch(e) {
+    setMsg_('⚠ Errore: ' + e.message, '#c62828');
+    if (btn) { btn.textContent = '💾 Salva stato & nota'; btn.disabled = false; }
   }
 }
 
