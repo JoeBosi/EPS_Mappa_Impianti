@@ -316,6 +316,70 @@ salva = async function(){
   }
   return originalSalva();
 };
+
+// ─── Auto-apertura da parametro URL ─────────────────────────────────────────
+function getParam(name){
+  const url = new URL(window.location.href);
+  return url.searchParams.get(name);
+}
+
+async function autoOpenFromParams(){
+  const file = getParam('file');
+  const rowId = getParam('row');
+  if(!file || !rowId) return;
+  
+  // Seleziona il file
+  document.getElementById('sel-file').value = file;
+  
+  // Carica
+  await carica();
+  
+  // Trova e evidenzia la riga
+  if(currentView === 'grid'){
+    highlightGridRow(rowId);
+  } else {
+    highlightTextRow(rowId);
+  }
+}
+
+function highlightGridRow(rowId){
+  const table = document.getElementById('grid-table');
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach((tr, idx) => {
+    const firstCell = tr.querySelector('td input');
+    if(firstCell && firstCell.value === rowId){
+      tr.style.background = '#ffeb3b';
+      tr.scrollIntoView({behavior:'smooth', block:'center'});
+      setTimeout(() => tr.style.background = '', 3000);
+    }
+  });
+}
+
+function highlightTextRow(rowId){
+  const editor = document.getElementById('editor');
+  const lines = editor.value.split('\n');
+  let lineIdx = -1;
+  for(let i = 0; i < lines.length; i++){
+    if(lines[i].startsWith(rowId + ',')){
+      lineIdx = i;
+      break;
+    }
+  }
+  if(lineIdx >= 0){
+    // Calcola posizione nel textarea
+    const pos = lines.slice(0, lineIdx).join('\n').length + (lineIdx > 0 ? 1 : 0);
+    editor.focus();
+    editor.setSelectionRange(pos, pos + lines[lineIdx].length);
+    // Scrolla alla riga
+    const lineHeight = editor.scrollHeight / lines.length;
+    editor.scrollTop = lineHeight * lineIdx - editor.clientHeight/2;
+  }
+}
+
+// Avvia auto-open se ci sono parametri
+if(getParam('file') && getParam('row')){
+  setTimeout(autoOpenFromParams, 500);
+}
 </script>
 </body>
 </html>

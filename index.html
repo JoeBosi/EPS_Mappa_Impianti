@@ -983,8 +983,10 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
   }
   
   const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-  return `<div style="font-size:.85rem;position:relative;padding-right:28px">
-<a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">📍</a>
+  const editUrl = `csv-editor.html?file=fornitori.csv&row=${id}`;
+  return `<div style="font-size:.85rem;position:relative;padding-right:54px">
+<a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:28px;font-size:1.1rem;text-decoration:none">📍</a>
+<a href="${editUrl}" target="_blank" title="Modifica in Editor CSV" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">�</a>
 <b style="color:#c62828;font-size:.95rem">${esc(nome)}</b><br>
 ${statoNotaHtml}<span style="color:#555">${esc(indirizzo)}</span><br>
 ${geoHtml}${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
