@@ -780,8 +780,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18
 }).addTo(map);
 
-const bluIcon = L.icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+const yellowIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -937,7 +937,7 @@ function aggiungiAllaUI(m) {
   const lng = parseFloat(m.lng);
   if (isNaN(lat) || isNaN(lng)) return;
   const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-  const lm = L.marker([lat, lng], { icon: bluIcon })
+  const lm = L.marker([lat, lng], { icon: yellowIcon })
     .addTo(map)
     .bindPopup(`<div style="position:relative;padding-right:28px"><a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">📍</a><b>${esc(m.nome)}</b><br>${esc(m.indirizzo)}<br><small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small></div>`);
   markers[m.id] = { data: m, leafletMarker: lm };
