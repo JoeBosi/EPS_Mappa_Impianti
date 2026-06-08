@@ -654,7 +654,7 @@
 <!-- ═══════════════ MAPPA ═══════════════ -->
 <div id="map-wrap">
   <div id="map"></div>
-  <button id="btn-fitall" onclick="adattaVista()" title="Mostra tutti i punti">⊞ Tutti i punti</button>
+  <button id="btn-fitall" onclick="ricaricaETutti()" title="Ricarica dati e centra tutti i punti">↻ Aggiorna</button>
   <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" id="btn-csv-editor" title="Editor CSV">📋</a>
 </div>
 
@@ -1052,7 +1052,7 @@ async function caricaMarkers() {
   let csvLista = [];
 
   try {
-    const res = await fetch('markers.csv');
+    const res = await fetch('markers.csv', { cache: 'no-store' });
     if (res.ok) {
       const testo = await res.text();
       csvLista = parseCSV(testo);
@@ -1084,7 +1084,7 @@ async function caricaFornitori() {
   let csvLista = [];
 
   try {
-    const res = await fetch('fornitori.csv');
+    const res = await fetch('fornitori.csv', { cache: 'no-store' });
     if (res.ok) {
       const testo = await res.text();
       csvLista = parseCSV(testo);
@@ -1372,6 +1372,26 @@ function chiudiDrawer() {
 document.getElementById('map').addEventListener('click', () => {
   if (window.innerWidth <= 640) chiudiDrawer();
 });
+
+// ─── Ricarica forzata (no cache) + autocentra ───────────────────────────────
+async function ricaricaETutti() {
+  const btn = document.getElementById('btn-fitall');
+  btn.disabled = true;
+  btn.textContent = '⏳ ...';
+
+  // Svuota marker e fornitori esistenti dalla mappa e dalla memoria
+  Object.values(markers).forEach(m => { try { map.removeLayer(m.leafletMarker); } catch(e){} });
+  Object.values(fornitori).forEach(f => { try { map.removeLayer(f.leafletMarker); } catch(e){} });
+  Object.keys(markers).forEach(k => delete markers[k]);
+  Object.keys(fornitori).forEach(k => delete fornitori[k]);
+  document.getElementById('marker-list').innerHTML = '<div id="empty-msg">Nessun punto ancora</div>';
+  document.getElementById('fornitore-list').innerHTML = '<div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>';
+
+  await caricaMarkers();
+
+  btn.disabled = false;
+  btn.textContent = '↻ Aggiorna';
+}
 
 // ─── Avvio ────────────────────────────────────────────────────────────────────
 caricaMarkers();
