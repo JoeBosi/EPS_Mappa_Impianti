@@ -923,7 +923,7 @@ async function salvaNotaFornitore(id) {
     const info = await infoRes.json();
     const sha = info.sha;
     let csvAttuale = atob(info.content.replace(/\n/g, ''));
-    csvAttuale = csvAttuale.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    csvAttuale = csvAttuale.replace(/^\uFEFF/, '').replace(/^\xEF\xBB\xBF/, '').replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     const righe = csvAttuale.split('\n');
     const header = righe[0];
