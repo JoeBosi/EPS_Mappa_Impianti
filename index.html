@@ -389,15 +389,17 @@
 
     .leaflet-popup-content textarea {
       width: 100%;
-      min-height: 80px;
+      min-height: 110px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      padding: 6px 8px;
-      font-size: .85rem;
+      padding: 7px 9px;
+      font-size: .82rem;
       font-family: inherit;
       resize: vertical;
       margin-top: 6px;
       box-sizing: border-box;
+      line-height: 1.45;
+      color: #333;
     }
 
     .leaflet-popup-content textarea:focus {
@@ -858,16 +860,20 @@ function aggiungiFornitoreAllaUI(f) {
   const nota = (noteLeggi()[f.id] || f.note || '');
   const lm = L.marker([lat, lng], { icon: redIcon })
     .addTo(map)
-    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota), { maxWidth: 280 });
+    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || ''), { maxWidth: 360, minWidth: 300 });
   fornitori[f.id] = { data: { ...f, note: nota }, leafletMarker: lm };
 }
 
-function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota) {
+function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web) {
   const notaEsc = (nota || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return `<b style="color:#c62828">${esc(nome)}</b><br>${esc(indirizzo)}<br>
-<small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
-<textarea id="nota-${id}" placeholder="Note sul fornitore...">${notaEsc}</textarea>
-<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota</button>`;
+  const sitoHtml = sito_web ? `<a href="${esc(sito_web)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#1565c0;word-break:break-all">${esc(sito_web.replace(/^https?:\/\//, ''))}</a><br>` : '';
+  return `<div style="font-size:.85rem">
+<b style="color:#c62828;font-size:.95rem">${esc(nome)}</b><br>
+<span style="color:#555">${esc(indirizzo)}</span><br>
+${sitoHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
+<textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
+<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota</button>
+</div>`;
 }
 
 function salvaNotaFornitore(id) {
@@ -880,7 +886,7 @@ function salvaNotaFornitore(id) {
     const f = fornitori[id].data;
     const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
     fornitori[id].leafletMarker.setPopupContent(
-      buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, testo)
+      buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, testo, f.sito_web || '')
     );
   }
   const btn = document.querySelector(`#nota-${id} ~ .btn-salva-nota`) ||
