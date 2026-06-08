@@ -489,6 +489,25 @@
     #btn-fitall:hover  { background: #e8f0fe; box-shadow: 0 3px 8px rgba(0,0,0,.22); }
     #btn-fitall:active { background: #c5cae9; }
 
+    #btn-csv-editor {
+      position: absolute;
+      top: 54px;
+      right: 10px;
+      z-index: 1000;
+      background: #fff;
+      border: 2px solid rgba(0,0,0,.2);
+      border-radius: 4px;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      text-decoration: none;
+      box-shadow: 0 1px 5px rgba(0,0,0,.15);
+    }
+    #btn-csv-editor:hover { background: #f4f4f4; }
+
     /* ───── MOBILE BOTTOM DRAWER ───── */
     @media (max-width: 640px) {
       body {
@@ -636,6 +655,7 @@
 <div id="map-wrap">
   <div id="map"></div>
   <button id="btn-fitall" onclick="adattaVista()" title="Mostra tutti i punti">⊞ Tutti i punti</button>
+  <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" id="btn-csv-editor" title="Editor CSV">📋</a>
 </div>
 
 <!-- ═══════════════ SIDEBAR / DRAWER ═══════════════ -->
@@ -702,8 +722,8 @@
     <div class="sezione-titolo" style="color:#555">
       Impostazioni
     </div>
-    <div style="padding:6px 10px 4px">
-      <a href="csv-editor.html" target="_blank" style="font-size:.78rem;color:#1565c0;text-decoration:none">📋 Apri editor CSV →</a>
+    <div style="padding:6px 10px 8px">
+      <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" style="display:inline-block;padding:5px 12px;background:#455a64;color:#fff;border-radius:6px;font-size:.75rem;font-weight:600;text-decoration:none">📋 Editor CSV</a>
     </div>
     <div id="form-token">
       <label for="inp-gh-token">GitHub Token (PAT)</label>
