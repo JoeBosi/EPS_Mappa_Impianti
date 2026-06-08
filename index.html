@@ -1072,7 +1072,13 @@ async function salvaNotaFornitore(id) {
     });
 
     const nuovoCsv = nuoveRighe.join('\n');
-    const nuovoB64 = btoa(unescape(encodeURIComponent(nuovoCsv)));
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(nuovoCsv);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const nuovoB64 = btoa(binary);
 
     const putRes = await fetch(apiBase, {
       method: 'PUT',
@@ -1169,7 +1175,13 @@ async function salvaStatoNota(id) {
     });
     
     const nuovoCsv = nuoveRighe.join('\n');
-    const nuovoB64 = btoa(unescape(encodeURIComponent(nuovoCsv)));
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(nuovoCsv);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const nuovoB64 = btoa(binary);
     
     const putRes = await fetch(apiBase, {
       method: 'PUT',
