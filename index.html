@@ -966,8 +966,8 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
   const geo = [comune, provincia ? `(${provincia})` : '', regione].filter(Boolean).join(' ');
   const geoHtml = geo ? `<span style="font-size:.75rem;color:#888">📍 ${esc(geo)}</span><br>` : '';
   
-  // Badge stato richiesta
-  let statoBadge = '';
+  // Stato e Nota richiesta (raggruppati consecutivamente)
+  let statoNotaHtml = '';
   if (stato_richiesta) {
     const statoColor = {
       'Attesa Risposta': '#c62828',
@@ -975,18 +975,20 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
       'Non Adesso': '#7b1fa2',
       'Ok': '#2e7d32'
     }[stato_richiesta] || '#666';
-    statoBadge = `<span style="display:inline-block;background:${statoColor};color:#fff;font-size:.72rem;padding:2px 8px;border-radius:12px;margin-bottom:6px;font-weight:600">${esc(stato_richiesta)}</span><br>`;
+    const statoBadge = `<span style="display:inline-block;background:${statoColor};color:#fff;font-size:.72rem;padding:2px 8px;border-radius:12px;font-weight:600">${esc(stato_richiesta)}</span>`;
+    const notaHtml = nota_richiesta ? `<div style="font-size:.75rem;color:#444;margin-top:4px;padding-left:4px;border-left:2px solid ${statoColor}">${esc(nota_richiesta)}</div>` : '';
+    statoNotaHtml = `<div style="margin-bottom:6px">${statoBadge}${notaHtml}</div>`;
+  } else if (nota_richiesta) {
+    // Solo nota senza stato
+    statoNotaHtml = `<div style="background:#f5f5f5;border-left:3px solid #1565c0;padding:6px 8px;margin:6px 0;font-size:.75rem;color:#444"><b>📋 Nota:</b> ${esc(nota_richiesta)}</div>`;
   }
-  
-  // Nota richiesta
-  const notaRichiestaHtml = nota_richiesta ? `<div style="background:#f5f5f5;border-left:3px solid #1565c0;padding:6px 8px;margin:6px 0;font-size:.75rem;color:#444"><b>📋 Nota:</b> ${esc(nota_richiesta)}</div>` : '';
   
   const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
   return `<div style="font-size:.85rem;position:relative;padding-right:28px">
 <a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">📍</a>
 <b style="color:#c62828;font-size:.95rem">${esc(nome)}</b><br>
-${statoBadge}<span style="color:#555">${esc(indirizzo)}</span><br>
-${geoHtml}${sitoHtml}${telHtml}${emailHtml}${notaRichiestaHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
+${statoNotaHtml}<span style="color:#555">${esc(indirizzo)}</span><br>
+${geoHtml}${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
 <textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
 <div id="nota-msg-${id}" style="font-size:.72rem;min-height:1em;text-align:center;margin-top:3px"></div>
 <button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota su GitHub</button>
