@@ -911,19 +911,21 @@ function aggiungiFornitoreAllaUI(f) {
   const nota = (noteLeggi()[f.id] || f.note || '');
   const lm = L.marker([lat, lng], { icon: redIcon })
     .addTo(map)
-    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || ''), { maxWidth: 360, minWidth: 300 });
+    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || '', f.tel || '', f.email || ''), { maxWidth: 360, minWidth: 300 });
   fornitori[f.id] = { data: { ...f, note: nota }, leafletMarker: lm };
 }
 
-function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web) {
+function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel, email) {
   const notaEsc = (nota || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const sitoHtml = sito_web ? `<a href="${esc(sito_web)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#1565c0;word-break:break-all">${esc(sito_web.replace(/^https?:\/\//, ''))}</a><br>` : '';
-    const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+  const sitoHtml = sito_web && sito_web !== 'n.d. (da reperire)' ? `<a href="${esc(sito_web)}" target="_blank" rel="noopener" style="font-size:.78rem;color:#1565c0;word-break:break-all">${esc(sito_web.replace(/^https?:\/\//, ''))}</a><br>` : '';
+  const telHtml  = tel   ? `<span style="font-size:.78rem">📞 <a href="tel:${esc(tel.replace(/\s/g,''))}" style="color:#333;text-decoration:none">${esc(tel)}</a></span><br>` : '';
+  const emailHtml = email ? `<span style="font-size:.78rem">✉️ <a href="mailto:${esc(email)}" style="color:#1565c0">${esc(email)}</a></span><br>` : '';
+  const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
   return `<div style="font-size:.85rem;position:relative;padding-right:28px">
 <a href="${gmUrl}" target="_blank" rel="noopener" title="Apri in Google Maps" style="position:absolute;top:0;right:0;font-size:1.1rem;text-decoration:none">📍</a>
 <b style="color:#c62828;font-size:.95rem">${esc(nome)}</b><br>
 <span style="color:#555">${esc(indirizzo)}</span><br>
-${sitoHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
+${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
 <textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
 <div id="nota-msg-${id}" style="font-size:.72rem;min-height:1em;text-align:center;margin-top:3px"></div>
 <button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota su GitHub</button>
