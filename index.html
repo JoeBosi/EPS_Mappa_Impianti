@@ -244,6 +244,10 @@
       margin-top: 2px;
     }
 
+    .marker-icon.rosso {
+      background: #c62828;
+    }
+
     .marker-text { flex: 1; min-width: 0; }
 
     .marker-name {
@@ -299,6 +303,126 @@
       font-size: .85rem;
       padding: 24px 0;
     }
+
+    .sezione-titolo {
+      padding: 10px 16px 6px;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid #e0e0e0;
+      margin-top: 4px;
+    }
+
+    .sezione-titolo.rosso { color: #c62828; }
+
+    .sezione-badge {
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+
+    .sezione-badge.blu { background: #e3f2fd; color: #1565c0; }
+    .sezione-badge.rosso { background: #ffebee; color: #c62828; }
+
+    #form-fornitore {
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    #form-fornitore label {
+      display: block;
+      font-size: .75rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    #form-fornitore input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      transition: border-color .2s;
+    }
+
+    #form-fornitore input:focus {
+      outline: none;
+      border-color: #c62828;
+    }
+
+    #form-fornitore .hint {
+      font-size: .72rem;
+      color: #888;
+      margin-top: -8px;
+      margin-bottom: 10px;
+    }
+
+    #btn-add-fornitore {
+      width: 100%;
+      padding: 12px;
+      background: #c62828;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      touch-action: manipulation;
+    }
+
+    #btn-add-fornitore:hover { background: #b71c1c; }
+    #btn-add-fornitore:disabled { background: #90a4ae; cursor: not-allowed; }
+
+    #status-msg-fornitore {
+      margin-top: 8px;
+      font-size: .85rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    .leaflet-popup-content textarea {
+      width: 100%;
+      min-height: 80px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: .85rem;
+      font-family: inherit;
+      resize: vertical;
+      margin-top: 6px;
+      box-sizing: border-box;
+    }
+
+    .leaflet-popup-content textarea:focus {
+      outline: none;
+      border-color: #c62828;
+    }
+
+    .btn-salva-nota {
+      margin-top: 6px;
+      padding: 6px 14px;
+      background: #c62828;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .btn-salva-nota:hover { background: #b71c1c; }
 
     /* ───── MAPPA ───── */
     #map-wrap {
@@ -526,13 +650,34 @@
       <div id="status-msg"></div>
     </div>
 
-    <div id="list-header">
-      Punti salvati
-      <span id="marker-count">0</span>
+    <div class="sezione-titolo">
+      Impianti
+      <span id="marker-count" class="sezione-badge blu">0</span>
     </div>
 
     <div id="marker-list">
       <div id="empty-msg">Nessun punto ancora</div>
+    </div>
+
+    <div class="sezione-titolo rosso">
+      Fornitori
+      <span id="fornitore-count" class="sezione-badge rosso">0</span>
+    </div>
+
+    <div id="form-fornitore">
+      <label for="inp-forn-nome">Nome fornitore</label>
+      <input id="inp-forn-nome" type="text" placeholder="es. Fornitore Pannelli Srl" autocomplete="off" />
+
+      <label for="inp-forn-pos">Posizione</label>
+      <input id="inp-forn-pos" type="text" placeholder="es. Via Roma 1, Milano" autocomplete="off" />
+      <p class="hint">Indirizzo oppure lat,lng (es. 45.46,9.19)</p>
+
+      <button id="btn-add-fornitore" onclick="aggiungiFornitore()">➕ Aggiungi fornitore</button>
+      <div id="status-msg-fornitore"></div>
+    </div>
+
+    <div id="fornitore-list">
+      <div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>
     </div>
   </div>
 </div>
@@ -602,12 +747,24 @@ const bluIcon = L.icon({
   shadowSize: [41, 41]
 });
 
+const redIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 // ─── Stato ───────────────────────────────────────────────────────────────────
-let markers = {};   // id → { data, leafletMarker }
+let markers = {};    // id → { data, leafletMarker }
+let fornitori = {};  // id → { data, leafletMarker }
 
 // localStorage: delta rispetto al CSV
 // { aggiunte: [{id,nome,indirizzo,lat,lng}], eliminati: Set<id> }
 const LS_KEY = 'eps_mappa_delta';
+const LS_KEY_FORN = 'eps_fornitori_delta';
+const LS_KEY_NOTE = 'eps_fornitori_note';
 
 function lsLeggi() {
   try {
@@ -621,6 +778,31 @@ function lsSalva(delta) {
     aggiunte: delta.aggiunte,
     eliminati: [...delta.eliminati]
   }));
+}
+
+function lsLeggiF() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LS_KEY_FORN) || '{}');
+    return { aggiunte: d.aggiunte || [], eliminati: new Set(d.eliminati || []) };
+  } catch { return { aggiunte: [], eliminati: new Set() }; }
+}
+
+function lsSalvaF(delta) {
+  localStorage.setItem(LS_KEY_FORN, JSON.stringify({
+    aggiunte: delta.aggiunte,
+    eliminati: [...delta.eliminati]
+  }));
+}
+
+function noteLeggi() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_NOTE) || '{}'); }
+  catch { return {}; }
+}
+
+function noteSalva(id, testo) {
+  const note = noteLeggi();
+  note[id] = testo;
+  localStorage.setItem(LS_KEY_NOTE, JSON.stringify(note));
 }
 
 // ─── Parser CSV robusto (gestisce campi quotati con virgole interne) ──────────
@@ -672,6 +854,45 @@ function aggiungiAllaUI(m) {
   markers[m.id] = { data: m, leafletMarker: lm };
 }
 
+// ─── Aggiunge un fornitore alla mappa ────────────────────────────────────────
+function aggiungiFornitoreAllaUI(f) {
+  const lat = parseFloat(f.lat);
+  const lng = parseFloat(f.lng);
+  if (isNaN(lat) || isNaN(lng)) return;
+  const nota = (noteLeggi()[f.id] || f.note || '');
+  const lm = L.marker([lat, lng], { icon: redIcon })
+    .addTo(map)
+    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota), { maxWidth: 280 });
+  fornitori[f.id] = { data: { ...f, note: nota }, leafletMarker: lm };
+}
+
+function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota) {
+  const notaEsc = (nota || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<b style="color:#c62828">${esc(nome)}</b><br>${esc(indirizzo)}<br>
+<small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
+<textarea id="nota-${id}" placeholder="Note sul fornitore...">${notaEsc}</textarea>
+<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota</button>`;
+}
+
+function salvaNotaFornitore(id) {
+  const el = document.getElementById('nota-' + id);
+  if (!el) return;
+  const testo = el.value;
+  noteSalva(id, testo);
+  if (fornitori[id]) {
+    fornitori[id].data.note = testo;
+    const f = fornitori[id].data;
+    const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
+    fornitori[id].leafletMarker.setPopupContent(
+      buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, testo)
+    );
+  }
+  const btn = document.querySelector(`#nota-${id} ~ .btn-salva-nota`) ||
+               document.querySelector(`.btn-salva-nota`);
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '✓ Salvato'; setTimeout(() => { btn.textContent = orig; }, 1500); }
+}
+
 // ─── Caricamento: CSV + delta localStorage ────────────────────────────────────
 async function caricaMarkers() {
   const delta = lsLeggi();
@@ -685,7 +906,6 @@ async function caricaMarkers() {
     }
   } catch(e) { /* file non disponibile, va bene */ }
 
-  // unisci: CSV prima, poi aggiunte utente, escludi eliminati
   const tutti = [...csvLista, ...delta.aggiunte];
   for (const m of tutti) {
     if (!delta.eliminati.has(m.id)) {
@@ -693,15 +913,56 @@ async function caricaMarkers() {
     }
   }
 
-  renderLista();
-  aggiornaContatore();
+  await caricaFornitori();
 
-  if (Object.keys(markers).length > 1) {
-    adattaVista();
+  renderLista();
+  aggiornaContatori();
+
+  const tuttiCoords = [
+    ...Object.values(markers).map(m => [parseFloat(m.data.lat), parseFloat(m.data.lng)]),
+    ...Object.values(fornitori).map(f => [parseFloat(f.data.lat), parseFloat(f.data.lng)])
+  ];
+  if (tuttiCoords.length > 1) adattaVista();
+  else if (tuttiCoords.length === 1) map.setView(tuttiCoords[0], 13);
+}
+
+async function caricaFornitori() {
+  const delta = lsLeggiF();
+  let csvLista = [];
+
+  try {
+    const res = await fetch('fornitori.csv');
+    if (res.ok) {
+      const testo = await res.text();
+      csvLista = parseCSV(testo);
+    }
+  } catch(e) { /* file non disponibile, va bene */ }
+
+  const note = noteLeggi();
+  const tutti = [...csvLista, ...delta.aggiunte];
+  for (const f of tutti) {
+    if (!delta.eliminati.has(f.id)) {
+      if (note[f.id] !== undefined) f.note = note[f.id];
+      aggiungiFornitoreAllaUI(f);
+    }
   }
+
+  renderListaFornitori();
 }
 
 // ─── Aggiunge un nuovo marker (geocoding + salva nel delta) ──────────────────
+async function geocodifica(pos) {
+  const coordMatch = pos.match(/^(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    return { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]), indirizzo: pos };
+  }
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pos)}&format=json&limit=1`;
+  const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+  const data = await res.json();
+  if (!data.length) return null;
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), indirizzo: data[0].display_name };
+}
+
 async function aggiungiMarker() {
   if (!accessoConsentito()) return;
   const nome = document.getElementById('inp-nome').value.trim();
@@ -712,49 +973,66 @@ async function aggiungiMarker() {
   const btn = document.getElementById('btn-add');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>Ricerca...';
+  setMsg('Geocoding in corso...', 'inf');
 
-  let lat, lng, indirizzo;
+  let geo;
+  try { geo = await geocodifica(pos); } catch(e) { geo = null; }
 
-  const coordMatch = pos.match(/^(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)$/);
-  if (coordMatch) {
-    lat = parseFloat(coordMatch[1]);
-    lng = parseFloat(coordMatch[2]);
-    indirizzo = pos;
-  } else {
-    setMsg('Geocoding in corso...', 'inf');
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pos)}&format=json&limit=1`;
-      const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
-      const data = await res.json();
-      if (!data.length) {
-        setMsg('Posizione non trovata — prova lat,lng o indirizzo più preciso', 'err');
-        ripristinaBttn(); return;
-      }
-      lat = parseFloat(data[0].lat);
-      lng = parseFloat(data[0].lon);
-      indirizzo = data[0].display_name;
-    } catch(e) {
-      setMsg('Errore geocoding', 'err');
-      ripristinaBttn(); return;
-    }
+  if (!geo) {
+    setMsg('Posizione non trovata — prova lat,lng o indirizzo più preciso', 'err');
+    ripristinaBttn(); return;
   }
 
-  const m = { id: idCasuale(), nome, indirizzo: indirizzo || '', lat: String(lat), lng: String(lng) };
-
-  // aggiorna delta
+  const m = { id: idCasuale(), nome, indirizzo: geo.indirizzo || '', lat: String(geo.lat), lng: String(geo.lng) };
   const delta = lsLeggi();
   delta.aggiunte.push(m);
   lsSalva(delta);
 
   aggiungiAllaUI(m);
   renderLista();
-  aggiornaContatore();
-  map.setView([lat, lng], 13);
+  aggiornaContatori();
+  map.setView([geo.lat, geo.lng], 13);
   markers[m.id].leafletMarker.openPopup();
   setMsg(`✓ "${nome}" aggiunto`, 'ok');
   document.getElementById('inp-nome').value = '';
   document.getElementById('inp-pos').value = '';
   ripristinaBttn();
+}
+
+async function aggiungiFornitore() {
+  if (!accessoConsentito()) return;
+  const nome = document.getElementById('inp-forn-nome').value.trim();
+  const pos  = document.getElementById('inp-forn-pos').value.trim();
+
+  if (!nome || !pos) { setMsgF('Inserisci nome e posizione', 'err'); return; }
+
+  const btn = document.getElementById('btn-add-fornitore');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Ricerca...';
+  setMsgF('Geocoding in corso...', 'inf');
+
+  let geo;
+  try { geo = await geocodifica(pos); } catch(e) { geo = null; }
+
+  if (!geo) {
+    setMsgF('Posizione non trovata — prova lat,lng o indirizzo più preciso', 'err');
+    ripristinaBttnF(); return;
+  }
+
+  const f = { id: idCasuale(), nome, indirizzo: geo.indirizzo || '', lat: String(geo.lat), lng: String(geo.lng), note: '' };
+  const delta = lsLeggiF();
+  delta.aggiunte.push(f);
+  lsSalvaF(delta);
+
+  aggiungiFornitoreAllaUI(f);
+  renderListaFornitori();
+  aggiornaContatori();
+  map.setView([geo.lat, geo.lng], 13);
+  fornitori[f.id].leafletMarker.openPopup();
+  setMsgF(`✓ "${nome}" aggiunto`, 'ok');
+  document.getElementById('inp-forn-nome').value = '';
+  document.getElementById('inp-forn-pos').value = '';
+  ripristinaBttnF();
 }
 
 // ─── Elimina marker ───────────────────────────────────────────────────────────
@@ -765,20 +1043,37 @@ function eliminaMarker(id, e) {
   map.removeLayer(markers[id].leafletMarker);
   delete markers[id];
 
-  // salva nel delta
   const delta = lsLeggi();
   delta.eliminati.add(id);
-  // se era un'aggiunta utente, rimuovila anche da aggiunte
   delta.aggiunte = delta.aggiunte.filter(m => m.id !== id);
   lsSalva(delta);
 
   renderLista();
-  aggiornaContatore();
+  aggiornaContatori();
 }
 
-// ─── Adatta vista a tutti i marker ───────────────────────────────────────────
+function eliminaFornitore(id, e) {
+  if (!accessoConsentito()) return;
+  e.stopPropagation();
+  if (!confirm('Eliminare questo fornitore?')) return;
+  map.removeLayer(fornitori[id].leafletMarker);
+  delete fornitori[id];
+
+  const delta = lsLeggiF();
+  delta.eliminati.add(id);
+  delta.aggiunte = delta.aggiunte.filter(f => f.id !== id);
+  lsSalvaF(delta);
+
+  renderListaFornitori();
+  aggiornaContatori();
+}
+
+// ─── Adatta vista a tutti i marker (impianti + fornitori) ────────────────────
 function adattaVista() {
-  const coords = Object.values(markers).map(m => [parseFloat(m.data.lat), parseFloat(m.data.lng)]);
+  const coords = [
+    ...Object.values(markers).map(m => [parseFloat(m.data.lat), parseFloat(m.data.lng)]),
+    ...Object.values(fornitori).map(f => [parseFloat(f.data.lat), parseFloat(f.data.lng)])
+  ];
   if (!coords.length) return;
   if (coords.length === 1) { map.setView(coords[0], 13); }
   else { map.fitBounds(coords, { padding: [40, 40] }); }
@@ -821,12 +1116,51 @@ function renderLista() {
   }).join('');
 }
 
+function renderListaFornitori() {
+  const lista = document.getElementById('fornitore-list');
+  const ids = Object.keys(fornitori);
+
+  if (!ids.length) {
+    lista.innerHTML = '<div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>';
+    return;
+  }
+
+  ids.sort((a, b) => fornitori[a].data.nome.localeCompare(fornitori[b].data.nome, 'it'));
+  lista.innerHTML = ids.map(id => {
+    const f = fornitori[id].data;
+    const lat = parseFloat(f.lat).toFixed(4);
+    const lng = parseFloat(f.lng).toFixed(4);
+    const haNota = (f.note || '').trim().length > 0;
+    return `
+      <div class="marker-item" onclick="centrareSuFornitore('${f.id}')">
+        <div class="marker-icon rosso"></div>
+        <div class="marker-text">
+          <div class="marker-name">${esc(f.nome)}</div>
+          <div class="marker-addr">${esc(f.indirizzo) || '—'}</div>
+          <div class="marker-coords">${lat}, ${lng}${haNota ? ' · 📝' : ''}</div>
+        </div>
+        <button class="btn-del" title="Elimina" onclick="eliminaFornitore('${f.id}', event)">✕</button>
+      </div>`;
+  }).join('');
+}
+
+// ─── Centra mappa su fornitore ────────────────────────────────────────────────
+function centrareSuFornitore(id) {
+  const f = fornitori[id];
+  if (!f) return;
+  map.setView([parseFloat(f.data.lat), parseFloat(f.data.lng)], 14);
+  f.leafletMarker.openPopup();
+  if (window.innerWidth <= 640) chiudiDrawer();
+}
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
-function aggiornaContatore() {
-  const n = Object.keys(markers).length;
-  document.getElementById('marker-count').textContent = n;
+function aggiornaContatori() {
+  const ni = Object.keys(markers).length;
+  const nf = Object.keys(fornitori).length;
+  document.getElementById('marker-count').textContent = ni;
+  document.getElementById('fornitore-count').textContent = nf;
   const badge = document.getElementById('drawer-badge');
-  if (badge) badge.textContent = n;
+  if (badge) badge.textContent = ni + nf;
 }
 
 function setMsg(txt, tipo) {
@@ -836,10 +1170,23 @@ function setMsg(txt, tipo) {
   if (tipo === 'ok') setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
+function setMsgF(txt, tipo) {
+  const el = document.getElementById('status-msg-fornitore');
+  el.textContent = txt;
+  el.className = tipo === 'ok' ? 'msg-ok' : tipo === 'err' ? 'msg-err' : 'msg-inf';
+  if (tipo === 'ok') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
 function ripristinaBttn() {
   const btn = document.getElementById('btn-add');
   btn.disabled = false;
   btn.innerHTML = '➕ Aggiungi';
+}
+
+function ripristinaBttnF() {
+  const btn = document.getElementById('btn-add-fornitore');
+  btn.disabled = false;
+  btn.innerHTML = '➕ Aggiungi fornitore';
 }
 
 function esc(str) {
@@ -852,6 +1199,12 @@ document.getElementById('inp-pos').addEventListener('keydown', e => {
 });
 document.getElementById('inp-nome').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('inp-pos').focus();
+});
+document.getElementById('inp-forn-pos').addEventListener('keydown', e => {
+  if (e.key === 'Enter') aggiungiFornitore();
+});
+document.getElementById('inp-forn-nome').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('inp-forn-pos').focus();
 });
 
 // ─── Mobile drawer ───────────────────────────────────────────────────────────

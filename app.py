@@ -33,6 +33,11 @@ def index():
     return send_from_directory(".", "index.html")
 
 
+@app.route("/<path:filename>")
+def static_files(filename):
+    return send_from_directory(".", filename)
+
+
 @app.route("/api/markers", methods=["GET"])
 def get_markers():
     return jsonify(read_markers())
