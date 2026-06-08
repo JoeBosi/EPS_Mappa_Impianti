@@ -922,7 +922,8 @@ async function salvaNotaFornitore(id) {
     if (!infoRes.ok) throw new Error('Impossibile leggere il file dal repo (token errato?)');
     const info = await infoRes.json();
     const sha = info.sha;
-    const csvAttuale = atob(info.content.replace(/\n/g, ''));
+    let csvAttuale = atob(info.content.replace(/\n/g, ''));
+    csvAttuale = csvAttuale.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     const righe = csvAttuale.split('\n');
     const header = righe[0];
