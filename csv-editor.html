@@ -32,6 +32,18 @@
     .token-row button{padding:5px 10px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer}
     #token-stato{font-size:.7rem;white-space:nowrap}
     #editor{flex:1;display:block;width:100%;padding:12px;font-family:monospace;font-size:.8rem;border:none;outline:none;resize:none;background:#fff;line-height:1.5}
+    #grid-view{flex:1;overflow:auto;background:#fff;display:none}
+    #grid-view table{width:100%;border-collapse:collapse;font-size:.8rem;table-layout:auto}
+    #grid-view th{background:#e3f2fd;padding:8px 6px;border:1px solid #90caf9;font-weight:600;white-space:nowrap;position:sticky;top:0;z-index:10}
+    #grid-view td{padding:4px 6px;border:1px solid #ddd;min-width:60px;max-width:300px}
+    #grid-view td input{width:100%;padding:3px 5px;border:1px solid transparent;font-size:.8rem;font-family:inherit;background:transparent}
+    #grid-view td input:focus{background:#fff;border-color:#1565c0;outline:none}
+    #grid-view tr:hover td{background:#f5f5f5}
+    #grid-view tr:nth-child(even) td{background:#fafafa}
+    #grid-view tr:nth-child(even):hover td{background:#f0f0f0}
+    .view-toggle{display:flex;gap:4px}
+    .view-toggle button{padding:4px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;font-size:.75rem;cursor:pointer}
+    .view-toggle button.active{background:#1565c0;color:#fff;border-color:#1565c0}
   </style>
 </head>
 <body>
@@ -58,6 +70,10 @@
   <button id="btn-load" onclick="carica()">⬇ Carica da GitHub</button>
   <button id="btn-save" onclick="salva()" disabled>💾 Salva su GitHub</button>
   <button id="btn-copy" onclick="copia()">📋 Copia</button>
+  <div class="view-toggle">
+    <button id="view-text" class="active" onclick="switchView('text')">📝 Testo</button>
+    <button id="view-grid" onclick="switchView('grid')">📊 Griglia</button>
+  </div>
   <span id="msg"></span>
   <div class="token-row">
     <label>Token GitHub:</label>
@@ -68,6 +84,7 @@
 </div>
 
 <textarea id="editor" spellcheck="false" placeholder="Clicca 'Carica da GitHub' per caricare il file..."></textarea>
+<div id="grid-view"><table id="grid-table"></table></div>
 
 <script>
 const PW_HASH = '0af3ee1bbb4564a23ee6dfb25d657a900f064e84373f0697e0af6a6fb0f5ebf7';
@@ -162,6 +179,143 @@ function copia(){
   navigator.clipboard.writeText(document.getElementById('editor').value)
     .then(()=>setMsg('✓ Copiato negli appunti','#2e7d32'));
 }
+
+// ─── Vista Griglia ───────────────────────────────────────────────────────────
+let currentView = 'text';
+
+function switchView(view){
+  currentView = view;
+  const editor = document.getElementById('editor');
+  const gridView = document.getElementById('grid-view');
+  const btnText = document.getElementById('view-text');
+  const btnGrid = document.getElementById('view-grid');
+  
+  if(view === 'grid'){
+    // Converti CSV in griglia
+    parseCSVToGrid();
+    editor.style.display = 'none';
+    gridView.style.display = 'block';
+    btnText.classList.remove('active');
+    btnGrid.classList.add('active');
+  } else {
+    // Converti griglia in CSV
+    updateEditorFromGrid();
+    gridView.style.display = 'none';
+    editor.style.display = 'block';
+    btnGrid.classList.remove('active');
+    btnText.classList.add('active');
+  }
+}
+
+function parseCSVToGrid(){
+  const csv = document.getElementById('editor').value;
+  const table = document.getElementById('grid-table');
+  const rows = parseCSV(csv);
+  
+  let html = '<thead><tr>';
+  if(rows.length > 0){
+    rows[0].forEach((cell, idx) => {
+      html += `<th contenteditable="true" data-col="${idx}">${esc(cell)}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    for(let i = 1; i < rows.length; i++){
+      html += '<tr>';
+      rows[i].forEach((cell, idx) => {
+        html += `<td><input type="text" value="${esc(cell)}" data-row="${i}" data-col="${idx}" onchange="markDirty()"></td>`;
+      });
+      html += '</tr>';
+    }
+    html += '</tbody>';
+  }
+  table.innerHTML = html;
+}
+
+function updateEditorFromGrid(){
+  const table = document.getElementById('grid-table');
+  if(!table.querySelector('th')) return; // Griglia vuota
+  
+  let rows = [];
+  
+  // Header
+  const headerCells = table.querySelectorAll('thead th');
+  let headerRow = [];
+  headerCells.forEach(th => headerRow.push(th.textContent.trim()));
+  rows.push(headerRow);
+  
+  // Data rows
+  const dataRows = table.querySelectorAll('tbody tr');
+  dataRows.forEach(tr => {
+    let row = [];
+    tr.querySelectorAll('td input').forEach(input => row.push(input.value));
+    rows.push(row);
+  });
+  
+  // Convert to CSV
+  document.getElementById('editor').value = rowsToCSV(rows);
+}
+
+function parseCSV(text){
+  const result = [];
+  const lines = text.replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  
+  for(let line of lines){
+    const row = [];
+    let cell = '';
+    let inQuotes = false;
+    
+    for(let i = 0; i < line.length; i++){
+      const char = line[i];
+      const next = line[i + 1];
+      
+      if(!inQuotes && char === '"'){
+        inQuotes = true;
+      } else if(inQuotes && char === '"' && next === '"'){
+        cell += '"';
+        i++;
+      } else if(inQuotes && char === '"'){
+        inQuotes = false;
+      } else if(!inQuotes && char === ','){
+        row.push(cell.trim());
+        cell = '';
+      } else {
+        cell += char;
+      }
+    }
+    row.push(cell.trim());
+    result.push(row);
+  }
+  return result;
+}
+
+function rowsToCSV(rows){
+  return rows.map(row => {
+    return row.map(cell => {
+      // Escape se contiene virgole o newline
+      if(cell.includes(',') || cell.includes('\n') || cell.includes('"')){
+        return '"' + cell.replace(/"/g, '""') + '"';
+      }
+      return cell;
+    }).join(',');
+  }).join('\n');
+}
+
+function esc(str){
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function markDirty(){
+  document.getElementById('btn-save').disabled = false;
+}
+
+// Aggiorna editor prima del salvataggio
+const originalSalva = salva;
+salva = async function(){
+  if(currentView === 'grid'){
+    updateEditorFromGrid();
+  }
+  return originalSalva();
+};
 </script>
 </body>
 </html>
