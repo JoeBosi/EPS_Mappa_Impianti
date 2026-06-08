@@ -872,27 +872,116 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web) {
 <span style="color:#555">${esc(indirizzo)}</span><br>
 ${sitoHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
 <textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
-<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota</button>
+<div id="nota-msg-${id}" style="font-size:.72rem;min-height:1em;text-align:center;margin-top:3px"></div>
+<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota su GitHub</button>
 </div>`;
 }
 
-function salvaNotaFornitore(id) {
+const GH_OWNER = 'JoeBosi';
+const GH_REPO  = 'EPS_Mappa_Impianti';
+const GH_FILE  = 'fornitori.csv';
+const LS_TOKEN = 'eps_gh_token';
+
+function getToken() {
+  return localStorage.getItem(LS_TOKEN) || '';
+}
+
+function chiediToken() {
+  const t = prompt('Inserisci il tuo GitHub Personal Access Token (PAT) con permesso "repo" per salvare le note nel CSV:');
+  if (t && t.trim()) {
+    localStorage.setItem(LS_TOKEN, t.trim());
+    return t.trim();
+  }
+  return '';
+}
+
+async function salvaNotaFornitore(id) {
   const el = document.getElementById('nota-' + id);
   if (!el) return;
   const testo = el.value;
+
+  const btn = document.querySelector('.btn-salva-nota');
+  const msgEl = document.getElementById('nota-msg-' + id);
+  const setMsg_ = (t, c) => { if (msgEl) { msgEl.textContent = t; msgEl.style.color = c; } };
+
   noteSalva(id, testo);
-  if (fornitori[id]) {
-    fornitori[id].data.note = testo;
-    const f = fornitori[id].data;
-    const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
-    fornitori[id].leafletMarker.setPopupContent(
-      buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, testo, f.sito_web || '')
-    );
+  if (fornitori[id]) fornitori[id].data.note = testo;
+
+  let token = getToken();
+  if (!token) token = chiediToken();
+  if (!token) { setMsg_('Token mancante — nota salvata solo localmente', '#e67e00'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvataggio...'; }
+  setMsg_('', '');
+
+  try {
+    const apiBase = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
+    const headers = { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' };
+
+    const infoRes = await fetch(apiBase, { headers });
+    if (!infoRes.ok) throw new Error('Impossibile leggere il file dal repo (token errato?)');
+    const info = await infoRes.json();
+    const sha = info.sha;
+    const csvAttuale = atob(info.content.replace(/\n/g, ''));
+
+    const righe = csvAttuale.split('\n');
+    const header = righe[0];
+    const cols = header.split(',');
+    const idxId   = cols.indexOf('id');
+    const idxNote = cols.indexOf('note');
+    if (idxId < 0 || idxNote < 0) throw new Error('Colonne id/note non trovate nel CSV');
+
+    const csvQuota = v => (v.includes(',') || v.includes('"') || v.includes('\n'))
+      ? '"' + v.replace(/"/g, '""') + '"' : v;
+
+    const nuoveRighe = righe.map((riga, i) => {
+      if (i === 0 || !riga.trim()) return riga;
+      const valori = splitCSVRiga(riga);
+      if (valori[idxId] === String(id)) {
+        valori[idxNote] = testo;
+        return valori.map(csvQuota).join(',');
+      }
+      return riga;
+    });
+
+    const nuovoCsv = nuoveRighe.join('\n');
+    const nuovoB64 = btoa(unescape(encodeURIComponent(nuovoCsv)));
+
+    const putRes = await fetch(apiBase, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        message: `note: aggiorna nota fornitore id=${id}`,
+        content: nuovoB64,
+        sha
+      })
+    });
+
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || 'Errore PUT');
+    }
+
+    setMsg_('✓ Salvato su GitHub', '#2e7d32');
+    if (btn) { btn.textContent = '✓ Salvato'; btn.disabled = false; }
+    setTimeout(() => {
+      if (btn) btn.textContent = '💾 Salva nota su GitHub';
+      if (msgEl) msgEl.textContent = '';
+    }, 3000);
+
+    const f = fornitori[id] && fornitori[id].data;
+    if (f) {
+      const lat = parseFloat(f.lat), lng = parseFloat(f.lng);
+      fornitori[id].leafletMarker.setPopupContent(
+        buildFornitorePopup(id, f.nome, f.indirizzo, lat, lng, testo, f.sito_web || '')
+      );
+    }
+    renderListaFornitori();
+
+  } catch(e) {
+    setMsg_('⚠ Errore: ' + e.message, '#c62828');
+    if (btn) { btn.textContent = '💾 Salva nota su GitHub'; btn.disabled = false; }
   }
-  const btn = document.querySelector(`#nota-${id} ~ .btn-salva-nota`) ||
-               document.querySelector(`.btn-salva-nota`);
-  const orig = btn ? btn.textContent : '';
-  if (btn) { btn.textContent = '✓ Salvato'; setTimeout(() => { btn.textContent = orig; }, 1500); }
 }
 
 // ─── Caricamento: CSV + delta localStorage ────────────────────────────────────
