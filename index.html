@@ -387,6 +387,27 @@
       text-align: center;
     }
 
+    #form-token {
+      padding: 8px 10px 10px;
+      border-top: 1px solid #ebebeb;
+    }
+
+    #form-token label {
+      display: block;
+      font-size: .7rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 2px;
+    }
+
+    #form-token input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: .82rem;
+    }
+
     .leaflet-popup-content textarea {
       width: 100%;
       min-height: 110px;
@@ -677,6 +698,18 @@
     <div id="fornitore-list">
       <div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>
     </div>
+
+    <div class="sezione-titolo" style="color:#555">
+      Impostazioni
+    </div>
+    <div id="form-token">
+      <label for="inp-gh-token">GitHub Token (PAT)</label>
+      <div style="display:flex;gap:4px">
+        <input id="inp-gh-token" type="password" placeholder="ghp_..." autocomplete="off" style="flex:1;margin-bottom:0" />
+        <button onclick="salvaToken()" style="padding:6px 8px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.75rem;cursor:pointer;white-space:nowrap">Salva</button>
+      </div>
+      <div id="token-status" style="font-size:.68rem;margin-top:3px;color:#888"></div>
+    </div>
   </div>
 </div>
 
@@ -700,10 +733,7 @@ async function verificaAccesso() {
     sessionStorage.setItem('eps_mappa_auth', '1');
     document.body.classList.remove('auth-locked');
     document.getElementById('login-screen').style.display = 'none';
-    setTimeout(() => {
-      map.invalidateSize();
-      adattaVista();
-    }, 50);
+    setTimeout(() => { map.invalidateSize(); adattaVista(); tokenPrecaricato(); }, 50);
   } else {
     msg.textContent = 'Password non corretta';
     input.value = '';
@@ -718,10 +748,7 @@ function accessoConsentito() {
 if (accessoConsentito()) {
   document.body.classList.remove('auth-locked');
   document.getElementById('login-screen').style.display = 'none';
-  setTimeout(() => {
-    map.invalidateSize();
-    adattaVista();
-  }, 50);
+  setTimeout(() => { map.invalidateSize(); adattaVista(); tokenPrecaricato(); }, 50);
 }
 
 document.getElementById('login-password').addEventListener('keydown', e => {
@@ -887,12 +914,24 @@ function getToken() {
 }
 
 function chiediToken() {
-  const t = prompt('Inserisci il tuo GitHub Personal Access Token (PAT) con permesso "repo" per salvare le note nel CSV:');
-  if (t && t.trim()) {
-    localStorage.setItem(LS_TOKEN, t.trim());
-    return t.trim();
-  }
   return '';
+}
+
+function salvaToken() {
+  const val = document.getElementById('inp-gh-token').value.trim();
+  if (!val) return;
+  localStorage.setItem(LS_TOKEN, val);
+  document.getElementById('inp-gh-token').value = '';
+  document.getElementById('token-status').textContent = '✓ Token salvato';
+  document.getElementById('token-status').style.color = '#2e7d32';
+  setTimeout(() => { document.getElementById('token-status').textContent = ''; }, 3000);
+}
+
+function tokenPrecaricato() {
+  const t = getToken();
+  const el = document.getElementById('token-status');
+  if (el) el.textContent = t ? '✓ Token presente' : 'Nessun token — le note non vengono salvate su GitHub';
+  if (el) el.style.color = t ? '#2e7d32' : '#e67e00';
 }
 
 async function salvaNotaFornitore(id) {
@@ -908,8 +947,7 @@ async function salvaNotaFornitore(id) {
   if (fornitori[id]) fornitori[id].data.note = testo;
 
   let token = getToken();
-  if (!token) token = chiediToken();
-  if (!token) { setMsg_('Token mancante — nota salvata solo localmente', '#e67e00'); return; }
+  if (!token) { setMsg_('⚠ Token GitHub mancante — inseriscilo nella sezione Impostazioni in basso', '#c62828'); return; }
 
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvataggio...'; }
   setMsg_('', '');
