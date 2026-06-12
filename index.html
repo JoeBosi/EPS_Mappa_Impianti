@@ -671,7 +671,7 @@
 <div id="map-wrap">
   <div id="map"></div>
   <button id="btn-fitall" onclick="ricaricaETutti()" title="Ricarica dati e centra tutti i punti">↻ Aggiorna</button>
-  <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" id="btn-csv-editor" title="Editor CSV">📋</a>
+  <a href="https://docs.google.com/spreadsheets/d/1ldv_2mf2uQOiwXgiMa6ihUt5wIHU6Cu0O2ApPNyIfKE/edit" target="_blank" id="btn-csv-editor" title="Apri Google Sheet Fornitori">�</a>
 </div>
 
 <!-- ═══════════════ SIDEBAR / DRAWER ═══════════════ -->
@@ -708,15 +708,9 @@
       <div id="fornitore-list">
         <div id="empty-msg-fornitore" style="text-align:center;color:#bbb;font-size:.85rem;padding:16px 0">Nessun fornitore ancora</div>
       </div>
-      <div style="padding:4px 10px 4px;border-top:1px solid #eee;flex-shrink:0;display:flex;align-items:center;gap:6px">
-        <a href="https://joebosi.github.io/EPS_Mappa_Impianti/csv-editor.html" target="_blank" style="padding:4px 10px;background:#455a64;color:#fff;border-radius:6px;font-size:.72rem;font-weight:600;text-decoration:none;white-space:nowrap">📋 CSV</a>
+      <div style="padding:4px 10px 8px;border-top:1px solid #eee;flex-shrink:0;display:flex;align-items:center;gap:6px">
+        <a href="https://docs.google.com/spreadsheets/d/1ldv_2mf2uQOiwXgiMa6ihUt5wIHU6Cu0O2ApPNyIfKE/edit" target="_blank" style="padding:4px 10px;background:#0f9d58;color:#fff;border-radius:6px;font-size:.72rem;font-weight:600;text-decoration:none;white-space:nowrap">� Google Sheet</a>
         <div id="token-status" style="font-size:.65rem;color:#888;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-      </div>
-      <div id="form-token" style="padding:4px 10px 8px;flex-shrink:0">
-        <div style="display:flex;gap:4px">
-          <input id="inp-gh-token" type="password" placeholder="GitHub Token (ghp_...)" autocomplete="off" style="flex:1;margin-bottom:0;font-size:.74rem;padding:5px 8px;border:1px solid #ccc;border-radius:6px" />
-          <button onclick="salvaToken()" style="padding:5px 8px;background:#555;color:#fff;border:none;border-radius:6px;font-size:.72rem;cursor:pointer;white-space:nowrap">Salva</button>
-        </div>
       </div>
     </div>
 
@@ -1026,10 +1020,9 @@ function salvaToken() {
 }
 
 function tokenPrecaricato() {
-  const t = getToken();
   const el = document.getElementById('token-status');
-  if (el) el.textContent = t ? '✓ Token presente' : 'Nessun token — le note non vengono salvate su GitHub';
-  if (el) el.style.color = t ? '#2e7d32' : '#e67e00';
+  if (el) el.textContent = '✓ Dati sincronizzati con Google Sheets';
+  if (el) el.style.color = '#2e7d32';
 }
 
 async function salvaNotaFornitore(id) {
