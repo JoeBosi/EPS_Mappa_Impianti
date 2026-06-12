@@ -990,6 +990,18 @@ ${geoHtml}${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFix
 </div>`;
 }
 
+// ============================================
+// CONFIGURAZIONE GOOGLE SHEETS (Nuovo)
+// ============================================
+const GS_API_KEY = 'AIzaSyCid_gFhabnUN23O_n6by6bGybEezMSp8w';
+const GS_SPREADSHEET_ID = '1ldv_2mf2uQOiwXgiMa6ihUt5wIHU6Cu0O2ApPNyIfKE';
+const GS_SHEET_NAME = 'Fornitori';
+// URL del Google Apps Script deployato (hardcoded - nessuna configurazione necessaria)
+const GS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzniiJ2sS8VJBC5ir9xzheUp6UdG6PoNyxvqlErOZEdrEC1TXoQDLBftZXtSAw_6vG9DA/exec';
+
+// ============================================
+// CONFIGURAZIONE GITHUB (Legacy - non usato)
+// ============================================
 const GH_OWNER = 'JoeBosi';
 const GH_REPO  = 'EPS_Mappa_Impianti';
 const GH_FILE  = 'fornitori.csv';
@@ -1133,70 +1145,61 @@ async function salvaStatoNota(id) {
     fornitori[id].data.nota_richiesta = nota;
   }
   
-  let token = getToken();
-  if (!token) { setMsg_('⚠ Token GitHub mancante', '#c62828'); return; }
-  
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvataggio...'; }
   setMsg_('', '');
   
   try {
-    const apiBase = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE}`;
-    const headers = { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' };
+    // Leggi dati da Google Sheets per trovare la riga
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${GS_SPREADSHEET_ID}/values/${GS_SHEET_NAME}?key=${GS_API_KEY}`;
+    const readRes = await fetch(readUrl);
+    if (!readRes.ok) throw new Error('Impossibile leggere da Google Sheets');
     
-    const infoRes = await fetch(apiBase, { headers });
-    if (!infoRes.ok) throw new Error('Impossibile leggere il file dal repo');
-    const info = await infoRes.json();
-    const sha = info.sha;
-    let csvAttuale = atob(info.content.replace(/\n/g, ''));
-    csvAttuale = csvAttuale.replace(/^\uFEFF/, '').replace(/^\xEF\xBB\xBF/, '').replace(/^ï»¿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const data = await readRes.json();
+    const rows = data.values;
+    const headers = rows[0];
     
-    const righe = csvAttuale.split('\n');
-    const header = righe[0];
-    const cols = header.split(',');
-    const idxId = cols.indexOf('id');
-    const idxStato = cols.indexOf('stato_richiesta');
-    const idxNota = cols.indexOf('nota_richiesta');
-    if (idxId < 0 || idxStato < 0 || idxNota < 0) throw new Error('Colonne stato_richiesta/nota_richiesta non trovate');
+    // Trova indici colonne
+    const idxId = headers.indexOf('id');
+    const idxStato = headers.indexOf('stato_richiesta');
+    const idxNota = headers.indexOf('nota_richiesta');
     
-    const csvQuota = v => (v.includes(',') || v.includes('"') || v.includes('\n'))
-      ? '"' + v.replace(/"/g, '""') + '"' : v;
-    
-    const nuoveRighe = righe.map((riga, i) => {
-      if (i === 0 || !riga.trim()) return riga;
-      const valori = splitCSVRiga(riga);
-      if (valori[idxId] === String(id)) {
-        valori[idxStato] = stato;
-        valori[idxNota] = nota;
-        return valori.map(csvQuota).join(',');
-      }
-      return riga;
-    });
-    
-    const nuovoCsv = nuoveRighe.join('\n');
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(nuovoCsv);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    if (idxId < 0 || idxStato < 0 || idxNota < 0) {
+      throw new Error('Colonne stato_richiesta/nota_richiesta non trovate nel foglio');
     }
-    const nuovoB64 = btoa(binary);
     
-    const putRes = await fetch(apiBase, {
-      method: 'PUT',
-      headers,
+    // Trova la riga del fornitore
+    let targetRow = -1;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][idxId] === String(id)) {
+        targetRow = i + 1; // +1 perché Sheets è 1-based
+        break;
+      }
+    }
+    
+    if (targetRow < 0) throw new Error(`Fornitore id=${id} non trovato`);
+    
+    // Salva su Google Sheets tramite Apps Script proxy (hardcoded URL)
+    const scriptUrl = GS_SCRIPT_URL;
+    
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
       body: JSON.stringify({
-        message: `aggiorna stato/nota fornitore id=${id}`,
-        content: nuovoB64,
-        sha
+        spreadsheetId: GS_SPREADSHEET_ID,
+        sheetName: GS_SHEET_NAME,
+        row: targetRow,
+        statoCol: idxStato + 1, // 1-based per Apps Script
+        notaCol: idxNota + 1,
+        stato: stato,
+        nota: nota
       })
     });
     
-    if (!putRes.ok) {
-      const err = await putRes.json();
-      throw new Error(err.message || 'Errore PUT');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || 'Errore salvataggio remoto');
     }
     
-    setMsg_('✓ Salvato su GitHub', '#2e7d32');
+    setMsg_('✓ Salvato su Google Sheets', '#2e7d32');
     if (btn) { btn.textContent = '✓ Salvato'; btn.disabled = false; }
     
     // Aggiorna marker con nuova icona
@@ -1217,7 +1220,7 @@ async function salvaStatoNota(id) {
       if (fornitori[id] && fornitori[id].leafletMarker) {
         fornitori[id].leafletMarker.closePopup();
       }
-      if (btn) btn.textContent = '💾 Salva stato & nota';
+      if (btn) btn.textContent = '💾 Salva';
       if (msgEl) msgEl.textContent = '';
     }, 1000);
     
@@ -1226,7 +1229,7 @@ async function salvaStatoNota(id) {
     
   } catch(e) {
     setMsg_('⚠ Errore: ' + e.message, '#c62828');
-    if (btn) { btn.textContent = '💾 Salva stato & nota'; btn.disabled = false; }
+    if (btn) { btn.textContent = '💾 Salva'; btn.disabled = false; }
   }
 }
 
@@ -1265,18 +1268,30 @@ async function caricaMarkers() {
 
 async function caricaFornitori() {
   const delta = lsLeggiF();
-  let csvLista = [];
+  let fornitoriLista = [];
 
   try {
-    const res = await fetch('fornitori.csv', { cache: 'no-store' });
+    // Carica da Google Sheets API
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${GS_SPREADSHEET_ID}/values/${GS_SHEET_NAME}?key=${GS_API_KEY}`;
+    const res = await fetch(url);
     if (res.ok) {
-      const testo = await res.text();
-      csvLista = parseCSV(testo);
+      const data = await res.json();
+      fornitoriLista = parseGoogleSheetsData(data);
     }
-  } catch(e) { /* file non disponibile, va bene */ }
+  } catch(e) { 
+    console.error('Errore caricamento Sheets:', e);
+    // Fallback: prova CSV locale
+    try {
+      const res = await fetch('fornitori.csv', { cache: 'no-store' });
+      if (res.ok) {
+        const testo = await res.text();
+        fornitoriLista = parseCSV(testo);
+      }
+    } catch(e2) { /* non disponibile */ }
+  }
 
   const note = noteLeggi();
-  const tutti = [...csvLista, ...delta.aggiunte];
+  const tutti = [...fornitoriLista, ...delta.aggiunte];
   for (const f of tutti) {
     if (!delta.eliminati.has(f.id)) {
       if (note[f.id] !== undefined) f.note = note[f.id];
@@ -1285,6 +1300,25 @@ async function caricaFornitori() {
   }
 
   renderListaFornitori();
+}
+
+// Converte dati Google Sheets in formato oggetti
+function parseGoogleSheetsData(data) {
+  if (!data.values || data.values.length < 2) return [];
+  
+  const headers = data.values[0];
+  const result = [];
+  
+  for (let i = 1; i < data.values.length; i++) {
+    const row = data.values[i];
+    const obj = {};
+    headers.forEach((header, idx) => {
+      obj[header] = row[idx] || '';
+    });
+    result.push(obj);
+  }
+  
+  return result;
 }
 
 // ─── Aggiunge un nuovo marker (geocoding + salva nel delta) ──────────────────
