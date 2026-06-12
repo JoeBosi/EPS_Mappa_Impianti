@@ -22,7 +22,7 @@ function doPost(e) {
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({
         error: 'Foglio non trovato: ' + sheetName
-      })).setMimeType(ContentService.MimeType.JSON).setResponseCode(404);
+      })).setMimeType(ContentService.MimeType.JSON);
     }
     
     // Aggiorna le celle (colonne 1-based)
@@ -35,25 +35,56 @@ function doPost(e) {
     // Successo
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: `Riga ${row} aggiornata: stato=${stato}, nota=${nota}`
+      message: `Riga ${row} aggiornata`
     })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
       error: error.toString()
-    })).setMimeType(ContentService.MimeType.JSON).setResponseCode(500);
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
-// Gestione richieste OPTIONS per CORS (preflight)
-function doOptions(e) {
-  return ContentService.createTextOutput('')
-    .setResponseCode(204)
-    .setHeaders({
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    });
+// Gestione richieste GET con JSONP (bypassa CORS)
+function doGet(e) {
+  try {
+    const data = e.parameter;
+    const spreadsheetId = data.spreadsheetId;
+    const sheetName = data.sheetName;
+    const row = parseInt(data.row);
+    const statoCol = parseInt(data.statoCol);
+    const notaCol = parseInt(data.notaCol);
+    const stato = data.stato;
+    const nota = data.nota;
+    const callback = data.callback || 'callback';
+    
+    // Apri lo spreadsheet
+    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    
+    let result;
+    if (!sheet) {
+      result = { error: 'Foglio non trovato: ' + sheetName };
+    } else {
+      // Aggiorna le celle (colonne 1-based)
+      const statoRange = sheet.getRange(row, statoCol);
+      const notaRange = sheet.getRange(row, notaCol);
+      
+      statoRange.setValue(stato);
+      notaRange.setValue(nota);
+      
+      result = { success: true, message: `Riga ${row} aggiornata` };
+    }
+    
+    // Risposta JSONP
+    const jsonp = callback + '(' + JSON.stringify(result) + ');';
+    return ContentService.createTextOutput(jsonp).setMimeType(ContentService.MimeType.JAVASCRIPT);
+    
+  } catch (error) {
+    const callback = e.parameter.callback || 'callback';
+    const jsonp = callback + '(' + JSON.stringify({ error: error.toString() }) + ');';
+    return ContentService.createTextOutput(jsonp).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
 }
 
 // Test

@@ -997,7 +997,7 @@ const GS_API_KEY = 'AIzaSyCid_gFhabnUN23O_n6by6bGybEezMSp8w';
 const GS_SPREADSHEET_ID = '1ldv_2mf2uQOiwXgiMa6ihUt5wIHU6Cu0O2ApPNyIfKE';
 const GS_SHEET_NAME = 'Fornitori';
 // URL del Google Apps Script deployato (hardcoded - nessuna configurazione necessaria)
-const GS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzniiJ2sS8VJBC5ir9xzheUp6UdG6PoNyxvqlErOZEdrEC1TXoQDLBftZXtSAw_6vG9DA/exec';
+const GS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxEIGXtSMlSb3xRhPhnhasfviLoQW3qxYsYhRhVhZKnAGFexzTPYs6_lzrxysNOFvdbkg/exec';
 
 // ============================================
 // CONFIGURAZIONE GITHUB (Legacy - non usato)
@@ -1178,26 +1178,20 @@ async function salvaStatoNota(id) {
     
     if (targetRow < 0) throw new Error(`Fornitore id=${id} non trovato`);
     
-    // Salva su Google Sheets tramite Apps Script proxy (hardcoded URL)
-    const scriptUrl = GS_SCRIPT_URL;
-    
-    const res = await fetch(scriptUrl, {
-      method: 'POST',
-      body: JSON.stringify({
-        spreadsheetId: GS_SPREADSHEET_ID,
-        sheetName: GS_SHEET_NAME,
-        row: targetRow,
-        statoCol: idxStato + 1, // 1-based per Apps Script
-        notaCol: idxNota + 1,
-        stato: stato,
-        nota: nota
-      })
+    // Salva su Google Sheets tramite Apps Script proxy (JSONP bypassa CORS)
+    const params = new URLSearchParams({
+      spreadsheetId: GS_SPREADSHEET_ID,
+      sheetName: GS_SHEET_NAME,
+      row: targetRow,
+      statoCol: idxStato + 1,
+      notaCol: idxNota + 1,
+      stato: stato,
+      nota: nota,
+      callback: 'gsCallback'
     });
     
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || 'Errore salvataggio remoto');
-    }
+    // Usa JSONP per evitare CORS
+    const result = await jsonpRequest(`${GS_SCRIPT_URL}?${params}`);
     
     setMsg_('✓ Salvato su Google Sheets', '#2e7d32');
     if (btn) { btn.textContent = '✓ Salvato'; btn.disabled = false; }
