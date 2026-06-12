@@ -981,14 +981,12 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
   ${statoSelect}
   <div style="font-size:.7rem;color:#666;margin-top:4px;margin-bottom:2px">📝 Nota:</div>
   ${notaInput}
-  <button class="btn-salva-stato-nota" onclick="salvaStatoNota('${id}')" style="margin-top:4px;font-size:.75rem;padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer">💾 Salva stato & nota</button>
+  <button class="btn-salva-stato-nota" onclick="salvaStatoNota('${id}')" style="margin-top:4px;font-size:.75rem;padding:4px 10px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer">💾 Salva</button>
   <div id="stato-nota-msg-${id}" style="font-size:.7rem;min-height:1em;margin-top:2px"></div>
 </div>
 <span style="color:#555">${esc(indirizzo)}</span><br>
 ${geoHtml}${sitoHtml}${telHtml}${emailHtml}<small style="color:#aaa">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
-<textarea id="nota-${id}" placeholder="Note sul fornitore..." style="margin-top:8px;font-size:.82rem;line-height:1.45">${notaEsc}</textarea>
 <div id="nota-msg-${id}" style="font-size:.72rem;min-height:1em;text-align:center;margin-top:3px"></div>
-<button class="btn-salva-nota" onclick="salvaNotaFornitore('${id}')">💾 Salva nota su GitHub</button>
 </div>`;
 }
 
