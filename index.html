@@ -953,7 +953,7 @@ function aggiungiFornitoreAllaUI(f) {
   const icon = getIconByStato(statoRichiesta);
   const lm = L.marker([lat, lng], { icon: icon })
     .addTo(map)
-    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || '', f.telefono || f.tel || '', f.email || '', f.regione || '', f.provincia || '', f.comune || '', statoRichiesta, notaRichiesta), { maxWidth: 360, minWidth: 300 });
+    .bindPopup(buildFornitorePopup(f.id, f.nome, f.indirizzo, lat, lng, nota, f.sito_web || '', f.telefono || f.tel || '', f.email || '', f.regione || '', f.provincia || '', f.comune || '', statoRichiesta, notaRichiesta), { maxWidth: 420, minWidth: 360 });
   fornitori[f.id] = { data: { ...f, note: nota }, leafletMarker: lm };
 }
 
@@ -970,7 +970,7 @@ function buildFornitorePopup(id, nome, indirizzo, lat, lng, nota, sito_web, tel,
   const statoSelect = `<select id="stato-${id}" style="font-size:.78rem;padding:2px 6px;border-radius:4px;border:1px solid #ccc;margin-bottom:4px">
     ${statoOptions.map(opt => `<option value="${opt}" ${stato_richiesta === opt ? 'selected' : ''}>${opt || '(nessuno)'}</option>`).join('')}
   </select>`;
-  const notaInput = `<textarea id="nota-richiesta-${id}" placeholder="Nota richiesta..." style="font-size:.75rem;padding:4px 6px;border-radius:4px;border:1px solid #ccc;width:100%;min-height:40px;margin-bottom:6px">${esc(nota_richiesta || '')}</textarea>`;
+  const notaInput = `<textarea id="nota-richiesta-${id}" placeholder="Nota richiesta..." style="font-size:.8rem;padding:6px 8px;border-radius:4px;border:1px solid #ccc;width:100%;min-height:120px;margin-bottom:6px;resize:vertical;line-height:1.4;box-sizing:border-box">${esc(nota_richiesta || '')}</textarea>`;
   
   const gmUrl = `https://www.google.com/maps?q=${lat},${lng}`;
   return `<div style="font-size:.85rem;position:relative;padding-right:28px">
