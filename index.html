@@ -1328,6 +1328,36 @@ async function geocodifica(pos) {
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), indirizzo: data[0].display_name };
 }
 
+// ─── JSONP request helper (bypassa CORS) ─────────────────────────────────────
+function jsonpRequest(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'gsCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const script = document.createElement('script');
+    const separator = url.includes('?') ? '&' : '?';
+    script.src = url.replace('callback=gsCallback', 'callback=' + callbackName);
+    
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout JSONP'));
+    }, 10000);
+    
+    window[callbackName] = function(data) {
+      cleanup();
+      if (data && data.error) reject(new Error(data.error));
+      else resolve(data);
+    };
+    
+    function cleanup() {
+      clearTimeout(timeout);
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[callbackName];
+    }
+    
+    script.onerror = () => { cleanup(); reject(new Error('Errore JSONP')); };
+    document.head.appendChild(script);
+  });
+}
+
 async function aggiungiMarker() {
   if (!accessoConsentito()) return;
   const nome = document.getElementById('inp-nome').value.trim();
