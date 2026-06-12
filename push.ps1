@@ -1,40 +1,38 @@
-# push.ps1 - Push automatico: allinea alla versione più recente (locale o remoto)
-# Non richiede parametri
+# push.ps1 - Push automatico: allinea la versione PIU' RECENTE (locale o remoto)
+# Non richiede parametri - confronta le DATE
 
 Write-Host "Verifica versione di fornitori.csv..." -ForegroundColor Cyan
 
 # Fetch info dal remoto
 git fetch origin
 
-# Scarica versione remota in un file temporaneo
-$tempFile = [System.IO.Path]::GetTempFileName()
-git show origin/master:fornitori.csv | Out-File -FilePath $tempFile -Encoding UTF8
+# Data ultima modifica del FILE LOCALE
+$localDate = (Get-Item fornitori.csv).LastWriteTime
 
-# Leggi contenuto di entrambi i file
-$localContent = Get-Content fornitori.csv -Raw
-$remoteContent = Get-Content $tempFile -Raw
+# Data ultimo commit remoto che ha modificato fornitori.csv
+$remoteDateStr = git log origin/master --fornitori.csv -1 --format=%cd --date=iso
+$remoteDate = [datetime]::Parse($remoteDateStr)
 
-# Rimuovi file temporaneo
-Remove-Item $tempFile
+Write-Host "  Locale modificato: $localDate" -ForegroundColor Gray
+Write-Host "  Remoto modificato: $remoteDate" -ForegroundColor Gray
 
-# Confronta contenuti
-if ($localContent -eq $remoteContent) {
-    Write-Host "File identici - nessuna azione necessaria." -ForegroundColor Green
+# Confronta date
+if ($localDate -gt $remoteDate) {
+    Write-Host "Versione LOCALE piu recente - faccio push..." -ForegroundColor Green
+    git add fornitori.csv
+    $msg = "aggiornamento fornitori.csv - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+    git commit -m $msg
+    git pull origin master --rebase
+    git push origin master
+} elseif ($remoteDate -gt $localDate) {
+    Write-Host "Versione REMOTA piu recente - creo backup..." -ForegroundColor Yellow
+    $backupFile = "fornitori_backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
+    Copy-Item fornitori.csv $backupFile
+    Write-Host "Backup creato: $backupFile" -ForegroundColor Cyan
+    git checkout origin/master -- fornitori.csv
+    Write-Host "Locale aggiornato alla versione remota." -ForegroundColor Green
 } else {
-    # Verifica se locale ha modifiche non committate
-    $hasLocalChanges = git status --porcelain fornitori.csv
-    
-    if ($hasLocalChanges) {
-        Write-Host "Versione LOCALE modificata - faccio push..." -ForegroundColor Green
-        git add -A
-        $msg = "aggiornamento fornitori.csv - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-        git commit -m $msg
-        git push origin master
-    } else {
-        Write-Host "Versione REMOTA diversa - aggiorno locale..." -ForegroundColor Yellow
-        git checkout origin/master -- fornitori.csv
-        Write-Host "Locale aggiornato alla versione remota." -ForegroundColor Green
-    }
+    Write-Host "File aggiornati (stessa data) - nessuna azione." -ForegroundColor Green
 }
 
 Write-Host "Done." -ForegroundColor Green
